@@ -26,7 +26,6 @@ class HealthKitManager: ObservableObject {
             HKQuantityType(.bodyFatPercentage),
             HKQuantityType(.bodyMassIndex),
             HKQuantityType(.leanBodyMass),
-            HKQuantityType(.boneMineralDensity),
             HKQuantityType(.stepCount),
             HKQuantityType(.distanceWalkingRunning),
             HKQuantityType(.activeEnergyBurned),
@@ -69,10 +68,9 @@ class HealthKitManager: ObservableObject {
         async let diastolic = fetchTodayAverage(.bloodPressureDiastolic, unit: .millimeterOfMercury())
         async let bodyFat = fetchLatestValue(.bodyFatPercentage, unit: .percent())
         async let leanMass = fetchLatestValue(.leanBodyMass, unit: .gramUnit(with: .kilo))
-        async let bmd = fetchLatestValue(.boneMineralDensity, unit: HKUnit.gramUnit(with: .none).unitDivided(by: HKUnit(from: "cm^2")))
 
         let (s, rhr, h, ac, ex, sp, rr, v) = await (steps, restHR, hrv, activeCal, exercise, spo2, respRate, vo2max)
-        let (gl, sys, dia, bf, lm, bd) = await (glucose, systolic, diastolic, bodyFat, leanMass, bmd)
+        let (gl, sys, dia, bf, lm) = await (glucose, systolic, diastolic, bodyFat, leanMass)
 
         todayHealth.steps = s
         todayHealth.restingHeartRate = rhr
@@ -87,7 +85,6 @@ class HealthKitManager: ObservableObject {
         todayHealth.bloodPressureDiastolic = dia
         todayHealth.bodyFatPercentage = bf * 100
         todayHealth.leanBodyMass = lm
-        todayHealth.boneMineralDensity = bd
 
         // 7-day averages
         async let avgS = fetchAverage(.stepCount, unit: .count(), days: 7, cumulative: true)
@@ -282,7 +279,6 @@ class HealthKitManager: ObservableObject {
             (.bloodPressureDiastolic, "blood_pressure_diastolic", .millimeterOfMercury()),
             (.bodyFatPercentage, "body_fat_percentage", .percent()),
             (.leanBodyMass, "lean_body_mass", .gramUnit(with: .kilo)),
-            (.boneMineralDensity, "bone_mineral_density", HKUnit.gramUnit(with: .none).unitDivided(by: HKUnit(from: "cm^2"))),
             (.walkingHeartRateAverage, "walking_heart_rate_avg", .count().unitDivided(by: .minute())),
             (.flightsClimbed, "flights_climbed", .count()),
             (.distanceWalkingRunning, "distance", .meter()),
