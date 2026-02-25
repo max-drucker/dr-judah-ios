@@ -42,7 +42,7 @@ struct SyncView: View {
                             }
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(.drJudahBlue)
+                        .tint(Color(red: 0.145, green: 0.388, blue: 0.922))
                         .disabled(syncManager.isSyncing)
                     }
                     .padding(.vertical, 4)
@@ -107,7 +107,7 @@ struct SyncView: View {
                         HStack(spacing: 12) {
                             Image(systemName: "doc.text.fill")
                                 .font(.title3)
-                                .foregroundStyle(.drJudahBlue)
+                                .foregroundStyle(Color(red: 0.145, green: 0.388, blue: 0.922))
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Import Omron BP Data")

@@ -332,7 +332,7 @@ struct InsightCardView: View {
         case "red": return .red
         case "orange": return .orange
         case "yellow": return .yellow
-        case "blue": return .drJudahBlue
+        case "blue": return Color(red: 0.145, green: 0.388, blue: 0.922)
         default: return .primary
         }
     }

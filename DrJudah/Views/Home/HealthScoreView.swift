@@ -6,7 +6,7 @@ struct HealthScoreView: View {
     private var scoreColor: Color {
         switch score {
         case 80...100: return .green
-        case 60..<80: return .drJudahBlue
+        case 60..<80: return Color(red: 0.145, green: 0.388, blue: 0.922)
         case 40..<60: return .orange
         default: return .red
         }
