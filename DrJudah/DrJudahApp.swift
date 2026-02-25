@@ -2,7 +2,6 @@ import SwiftUI
 
 @main
 struct DrJudahApp: App {
-    @StateObject private var authManager = AuthManager()
     @StateObject private var healthKitManager = HealthKitManager()
     @StateObject private var syncManager = BackgroundSyncManager()
 
@@ -14,7 +13,6 @@ struct DrJudahApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(authManager)
                 .environmentObject(healthKitManager)
                 .environmentObject(syncManager)
         }

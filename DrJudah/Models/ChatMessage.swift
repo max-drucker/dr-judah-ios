@@ -18,14 +18,3 @@ struct ChatMessage: Identifiable, Codable {
         self.timestamp = timestamp
     }
 }
-
-struct AskJudahRequest: Codable {
-    let message: String
-    let history: [[String: String]]
-    let model: String
-    let healthContext: String?
-}
-
-struct AskJudahResponse: Codable {
-    let response: String
-}

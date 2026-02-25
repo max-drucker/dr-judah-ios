@@ -12,6 +12,15 @@ struct TodayHealth {
     var bodyTemperature: Double = 0
     var weight: Double = 0
 
+    // New data types
+    var bloodGlucose: Double = 0           // mg/dL
+    var bloodPressureSystolic: Double = 0   // mmHg
+    var bloodPressureDiastolic: Double = 0  // mmHg
+    var bodyFatPercentage: Double = 0       // %
+    var leanBodyMass: Double = 0            // kg
+    var boneMineralDensity: Double = 0      // g/cm²
+    var vo2Max: Double = 0                  // mL/kg·min
+
     // 7-day averages for trend comparison
     var avgSteps: Double = 0
     var avgRestingHR: Double = 0
@@ -19,6 +28,9 @@ struct TodayHealth {
     var avgActiveCalories: Double = 0
     var avgExerciseMinutes: Double = 0
     var avgBloodOxygen: Double = 0
+    var avgBloodGlucose: Double = 0
+    var avgSystolic: Double = 0
+    var avgDiastolic: Double = 0
 
     // Sparkline data (last 7 days)
     var stepsHistory: [(Date, Double)] = []
@@ -27,6 +39,8 @@ struct TodayHealth {
     var activeCaloriesHistory: [(Date, Double)] = []
     var exerciseMinutesHistory: [(Date, Double)] = []
     var bloodOxygenHistory: [(Date, Double)] = []
+    var bloodGlucoseHistory: [(Date, Double)] = []
+    var systolicHistory: [(Date, Double)] = []
 }
 
 struct Workout: Identifiable {
@@ -109,5 +123,18 @@ struct HealthInsight: Identifiable {
     let id = UUID()
     let icon: String
     let color: String
+    let title: String
     let message: String
+    let severity: InsightSeverity
+
+    enum InsightSeverity: Int, Comparable {
+        case info = 0
+        case attention = 1
+        case warning = 2
+        case critical = 3
+
+        static func < (lhs: InsightSeverity, rhs: InsightSeverity) -> Bool {
+            lhs.rawValue < rhs.rawValue
+        }
+    }
 }

@@ -9,6 +9,8 @@ class BackgroundSyncManager: ObservableObject {
     @Published var syncError: String?
     @Published var syncedVitalsCount: Int = 0
     @Published var syncedWorkoutsCount: Int = 0
+    @Published var syncedSleepCount: Int = 0
+    @Published var syncProgress: String = ""
 
     private let lastSyncKey = "lastHealthSyncDate"
     private let healthKit = HealthKitManager()
@@ -45,10 +47,10 @@ class BackgroundSyncManager: ObservableObject {
     func scheduleBackgroundSync() {
         let syncRequest = BGProcessingTaskRequest(identifier: "com.drjudah.healthsync")
         syncRequest.requiresNetworkConnectivity = true
-        syncRequest.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60) // 1 hour
+        syncRequest.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60)
 
         let checkRequest = BGAppRefreshTaskRequest(identifier: "com.drjudah.healthcheck")
-        checkRequest.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60 * 2) // 2 hours
+        checkRequest.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60 * 2)
 
         do {
             try BGTaskScheduler.shared.submit(syncRequest)
@@ -63,28 +65,40 @@ class BackgroundSyncManager: ObservableObject {
         syncError = nil
         defer { isSyncing = false }
 
-        let since = lastSyncDate ?? Calendar.current.date(byAdding: .day, value: -7, to: Date())!
+        // First sync: go back 2 years. Subsequent syncs: since last sync.
+        let since: Date
+        if let lastSync = lastSyncDate {
+            since = lastSync
+        } else {
+            since = Calendar.current.date(byAdding: .year, value: -2, to: Date())!
+        }
 
         do {
+            syncProgress = "Requesting HealthKit access…"
             try await healthKit.requestAuthorization()
+
+            syncProgress = "Fetching health data…"
             let payload = await healthKit.fetchAllForSync(since: since)
 
             syncedVitalsCount = payload.vitals.count
             syncedWorkoutsCount = payload.workouts.count
+            syncedSleepCount = payload.sleepSessions.count
 
+            syncProgress = "Uploading \(payload.vitals.count) vitals…"
             try await SupabaseManager.shared.syncHealthData(data: payload)
 
             lastSyncDate = Date()
             UserDefaults.standard.set(lastSyncDate, forKey: lastSyncKey)
 
-            // Check for anomalies
+            syncProgress = "Checking for anomalies…"
             await healthKit.fetchAllData()
             NotificationManager.shared.checkAndNotify(health: healthKit.todayHealth)
 
-            // Schedule next sync
+            syncProgress = "Done!"
             scheduleBackgroundSync()
         } catch {
             syncError = error.localizedDescription
+            syncProgress = ""
         }
     }
 }

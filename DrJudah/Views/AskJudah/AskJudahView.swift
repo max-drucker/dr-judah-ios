@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct AskJudahView: View {
-    @EnvironmentObject var healthKitManager: HealthKitManager
     @State private var messages: [ChatMessage] = []
     @State private var inputText = ""
     @State private var isLoading = false
@@ -92,7 +91,7 @@ struct AskJudahView: View {
             Text("Ask Dr. Judah")
                 .font(.title2.bold())
 
-            Text("Get personalized health insights based on your Apple Health data.")
+            Text("Get personalized health insights based on your complete health profile — labs, genetics, imaging, supplements, Apple Health, and more.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -100,8 +99,9 @@ struct AskJudahView: View {
 
             VStack(spacing: 8) {
                 SuggestionChip("How's my recovery today?")
-                SuggestionChip("Analyze my sleep trends")
-                SuggestionChip("Should I do a hard workout?")
+                SuggestionChip("Analyze my recent bloodwork")
+                SuggestionChip("What should I focus on this week?")
+                SuggestionChip("Review my supplement stack")
             }
             .padding(.top, 8)
         }
@@ -135,19 +135,19 @@ struct AskJudahView: View {
         isLoading = true
 
         Task {
-            let health = healthKitManager.todayHealth
-            let context = "iOS app context — Today: Steps: \(Int(health.steps)), Resting HR: \(Int(health.restingHeartRate)) bpm, HRV: \(Int(health.hrv)) ms, Active Cal: \(Int(health.activeCalories)), Exercise: \(Int(health.exerciseMinutes)) min, Health Score: \(healthKitManager.healthScore)/100"
-
             do {
+                // Send to web API — it has FULL context (labs, genetics, imaging, supplements, Apple Health)
                 let response = try await SupabaseManager.shared.askJudah(
                     message: text,
-                    history: messages,
-                    healthContext: context
+                    history: Array(messages.dropLast()) // Don't include current message in history
                 )
                 let assistantMessage = ChatMessage(role: .assistant, content: response)
                 messages.append(assistantMessage)
             } catch {
-                let errorMessage = ChatMessage(role: .assistant, content: "Sorry, I couldn't connect. Please try again.")
+                let errorMessage = ChatMessage(
+                    role: .assistant,
+                    content: "Sorry, I couldn't connect to the server. Error: \(error.localizedDescription)"
+                )
                 messages.append(errorMessage)
             }
 

@@ -6,6 +6,13 @@ class SupabaseManager {
 
     let client: SupabaseClient
 
+    private let userId = Config.userId
+    private let isoFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
     private init() {
         client = SupabaseClient(
             supabaseURL: URL(string: Config.supabaseURL)!,
@@ -16,30 +23,37 @@ class SupabaseManager {
     // MARK: - Sync Health Data
 
     func syncHealthData(data: SyncPayload) async throws {
-        // Sync vitals
+        // Sync vitals in batches of 500
         if !data.vitals.isEmpty {
-            let rows = data.vitals.map { vital -> [String: AnyJSON] in
-                [
-                    "metric_type": .string(vital.metricType),
-                    "value": .double(vital.value),
-                    "unit": .string(vital.unit),
-                    "recorded_at": .string(ISO8601DateFormatter().string(from: vital.recordedAt)),
-                    "source": .string("apple_health"),
-                ]
+            let batches = stride(from: 0, to: data.vitals.count, by: 500).map {
+                Array(data.vitals[$0..<min($0 + 500, data.vitals.count)])
             }
-            try await client.from("apple_health_vitals")
-                .upsert(rows, onConflict: "user_id,metric_type,recorded_at")
-                .execute()
+            for batch in batches {
+                let rows = batch.map { vital -> [String: AnyJSON] in
+                    [
+                        "user_id": .string(userId),
+                        "metric_type": .string(vital.metricType),
+                        "value": .double(vital.value),
+                        "unit": .string(vital.unit),
+                        "recorded_at": .string(isoFormatter.string(from: vital.recordedAt)),
+                        "source": .string("apple_health"),
+                    ]
+                }
+                try await client.from("apple_health_vitals")
+                    .upsert(rows, onConflict: "user_id,metric_type,recorded_at")
+                    .execute()
+            }
         }
 
         // Sync workouts
         if !data.workouts.isEmpty {
             let rows = data.workouts.map { w -> [String: AnyJSON] in
                 var row: [String: AnyJSON] = [
+                    "user_id": .string(userId),
                     "workout_type": .string(w.workoutType),
                     "duration_minutes": .double(w.durationMinutes),
-                    "started_at": .string(ISO8601DateFormatter().string(from: w.startedAt)),
-                    "ended_at": .string(ISO8601DateFormatter().string(from: w.endedAt)),
+                    "started_at": .string(isoFormatter.string(from: w.startedAt)),
+                    "ended_at": .string(isoFormatter.string(from: w.endedAt)),
                     "source": .string("apple_health"),
                 ]
                 if let cal = w.caloriesBurned { row["calories_burned"] = .double(cal) }
@@ -53,47 +67,88 @@ class SupabaseManager {
                 .execute()
         }
 
-        // Sync sleep
+        // Sync sleep in batches
         if !data.sleepSessions.isEmpty {
-            let rows = data.sleepSessions.map { s -> [String: AnyJSON] in
-                [
-                    "sleep_stage": .string(s.sleepStage),
-                    "started_at": .string(ISO8601DateFormatter().string(from: s.startedAt)),
-                    "ended_at": .string(ISO8601DateFormatter().string(from: s.endedAt)),
-                    "source": .string("apple_health"),
-                ]
+            let batches = stride(from: 0, to: data.sleepSessions.count, by: 500).map {
+                Array(data.sleepSessions[$0..<min($0 + 500, data.sleepSessions.count)])
             }
-            try await client.from("apple_health_sleep")
-                .upsert(rows, onConflict: "user_id,sleep_stage,started_at")
-                .execute()
+            for batch in batches {
+                let rows = batch.map { s -> [String: AnyJSON] in
+                    [
+                        "user_id": .string(userId),
+                        "sleep_stage": .string(s.sleepStage),
+                        "started_at": .string(isoFormatter.string(from: s.startedAt)),
+                        "ended_at": .string(isoFormatter.string(from: s.endedAt)),
+                        "source": .string("apple_health"),
+                    ]
+                }
+                try await client.from("apple_health_sleep")
+                    .upsert(rows, onConflict: "user_id,sleep_stage,started_at")
+                    .execute()
+            }
         }
     }
 
-    // MARK: - Ask Judah
+    // MARK: - Omron BP CSV Upload
 
-    func askJudah(message: String, history: [ChatMessage], healthContext: String?) async throws -> String {
+    func uploadBloodPressureReadings(_ readings: [(systolic: Int, diastolic: Int, pulse: Int?, measuredAt: Date, notes: String?)]) async throws {
+        let rows = readings.map { r -> [String: AnyJSON] in
+            var row: [String: AnyJSON] = [
+                "user_id": .string(userId),
+                "systolic": .double(Double(r.systolic)),
+                "diastolic": .double(Double(r.diastolic)),
+                "measured_at": .string(isoFormatter.string(from: r.measuredAt)),
+                "source": .string("omron"),
+            ]
+            if let pulse = r.pulse { row["pulse"] = .double(Double(pulse)) }
+            if let notes = r.notes { row["notes"] = .string(notes) }
+            return row
+        }
+        try await client.from("blood_pressure_readings")
+            .upsert(rows, onConflict: "user_id,measured_at,source")
+            .execute()
+    }
+
+    // MARK: - Ask Judah (matches web API format)
+
+    func askJudah(message: String, history: [ChatMessage]) async throws -> String {
         let historyDicts = history.map { ["role": $0.role.rawValue, "content": $0.content] }
 
-        var body: [String: Any] = [
+        let body: [String: Any] = [
             "message": message,
             "history": historyDicts,
-            "model": "claude-opus-4-6",
+            "model": "anthropic/claude-sonnet-4",
         ]
-        if let ctx = healthContext {
-            body["healthContext"] = ctx
-        }
 
         let url = URL(string: "\(Config.apiBaseURL)/api/ask")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.userEmail, forHTTPHeaderField: "X-User-Email")
+        request.timeoutInterval = 120
+
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
 
-        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let response = json["response"] as? String {
-            return response
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw NSError(domain: "AskJudah", code: httpResponse.statusCode,
+                         userInfo: [NSLocalizedDescriptionKey: "API error (\(httpResponse.statusCode)): \(errorBody)"])
+        }
+
+        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            // Web API returns "reply" not "response"
+            if let reply = json["reply"] as? String {
+                return reply
+            }
+            if let response = json["response"] as? String {
+                return response
+            }
         }
 
         throw URLError(.badServerResponse)

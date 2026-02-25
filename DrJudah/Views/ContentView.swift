@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
+
     @State private var selectedTab = 0
 
     var body: some View {
@@ -29,8 +30,9 @@ struct ContentView: View {
             do {
                 try await healthKitManager.requestAuthorization()
                 _ = await NotificationManager.shared.requestPermission()
-                NotificationManager.shared.scheduleWeeklySummary()
-            } catch {}
+            } catch {
+                print("HealthKit authorization failed: \(error)")
+            }
         }
     }
 }

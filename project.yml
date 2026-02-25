@@ -24,6 +24,7 @@ targets:
       - package: Supabase
         products:
           - Supabase
+      - sdk: UniformTypeIdentifiers.framework
 packages:
   Supabase:
     url: https://github.com/supabase-community/supabase-swift

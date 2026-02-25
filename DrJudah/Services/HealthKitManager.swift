@@ -4,11 +4,10 @@ import Combine
 
 @MainActor
 class HealthKitManager: ObservableObject {
-    private let store = HKHealthStore()
+    let store = HKHealthStore()
 
     @Published var todayHealth = TodayHealth()
     @Published var recentWorkouts: [Workout] = []
-    @Published var healthScore: Int = 0
     @Published var insights: [HealthInsight] = []
     @Published var isAuthorized = false
     @Published var isLoading = false
@@ -27,6 +26,7 @@ class HealthKitManager: ObservableObject {
             HKQuantityType(.bodyFatPercentage),
             HKQuantityType(.bodyMassIndex),
             HKQuantityType(.leanBodyMass),
+            HKQuantityType(.boneMineralDensity),
             HKQuantityType(.stepCount),
             HKQuantityType(.distanceWalkingRunning),
             HKQuantityType(.activeEnergyBurned),
@@ -35,6 +35,7 @@ class HealthKitManager: ObservableObject {
             HKQuantityType(.flightsClimbed),
             HKQuantityType(.vo2Max),
             HKQuantityType(.walkingHeartRateAverage),
+            HKQuantityType(.bloodGlucose),
             HKCategoryType(.sleepAnalysis),
             HKObjectType.workoutType(),
         ]
@@ -52,43 +53,71 @@ class HealthKitManager: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
+        // Basic vitals
         async let steps = fetchTodayCumulative(.stepCount, unit: .count())
         async let restHR = fetchTodayAverage(.restingHeartRate, unit: .count().unitDivided(by: .minute()))
         async let hrv = fetchTodayAverage(.heartRateVariabilitySDNN, unit: .secondUnit(with: .milli))
         async let activeCal = fetchTodayCumulative(.activeEnergyBurned, unit: .kilocalorie())
         async let exercise = fetchTodayCumulative(.appleExerciseTime, unit: .minute())
         async let spo2 = fetchTodayAverage(.oxygenSaturation, unit: .percent())
+        async let respRate = fetchTodayAverage(.respiratoryRate, unit: .count().unitDivided(by: .minute()))
+        async let vo2max = fetchLatestValue(.vo2Max, unit: HKUnit(from: "ml/kg*min"))
 
-        let (s, rhr, h, ac, ex, sp) = await (steps, restHR, hrv, activeCal, exercise, spo2)
+        // New types
+        async let glucose = fetchTodayAverage(.bloodGlucose, unit: HKUnit(from: "mg/dL"))
+        async let systolic = fetchTodayAverage(.bloodPressureSystolic, unit: .millimeterOfMercury())
+        async let diastolic = fetchTodayAverage(.bloodPressureDiastolic, unit: .millimeterOfMercury())
+        async let bodyFat = fetchLatestValue(.bodyFatPercentage, unit: .percent())
+        async let leanMass = fetchLatestValue(.leanBodyMass, unit: .gramUnit(with: .kilo))
+        async let bmd = fetchLatestValue(.boneMineralDensity, unit: HKUnit.gramUnit(with: .none).unitDivided(by: HKUnit(from: "cm^2")))
+
+        let (s, rhr, h, ac, ex, sp, rr, v) = await (steps, restHR, hrv, activeCal, exercise, spo2, respRate, vo2max)
+        let (gl, sys, dia, bf, lm, bd) = await (glucose, systolic, diastolic, bodyFat, leanMass, bmd)
+
         todayHealth.steps = s
         todayHealth.restingHeartRate = rhr
         todayHealth.hrv = h
         todayHealth.activeCalories = ac
         todayHealth.exerciseMinutes = ex
-        todayHealth.bloodOxygen = sp * 100 // convert from fraction
+        todayHealth.bloodOxygen = sp * 100
+        todayHealth.respiratoryRate = rr
+        todayHealth.vo2Max = v
+        todayHealth.bloodGlucose = gl
+        todayHealth.bloodPressureSystolic = sys
+        todayHealth.bloodPressureDiastolic = dia
+        todayHealth.bodyFatPercentage = bf * 100
+        todayHealth.leanBodyMass = lm
+        todayHealth.boneMineralDensity = bd
 
-        // Fetch 7-day averages
+        // 7-day averages
         async let avgS = fetchAverage(.stepCount, unit: .count(), days: 7, cumulative: true)
         async let avgRHR = fetchAverage(.restingHeartRate, unit: .count().unitDivided(by: .minute()), days: 7, cumulative: false)
         async let avgH = fetchAverage(.heartRateVariabilitySDNN, unit: .secondUnit(with: .milli), days: 7, cumulative: false)
         async let avgAC = fetchAverage(.activeEnergyBurned, unit: .kilocalorie(), days: 7, cumulative: true)
+        async let avgGL = fetchAverage(.bloodGlucose, unit: HKUnit(from: "mg/dL"), days: 7, cumulative: false)
+        async let avgSys = fetchAverage(.bloodPressureSystolic, unit: .millimeterOfMercury(), days: 7, cumulative: false)
+        async let avgDia = fetchAverage(.bloodPressureDiastolic, unit: .millimeterOfMercury(), days: 7, cumulative: false)
 
-        let (as7, arhr7, ah7, aac7) = await (avgS, avgRHR, avgH, avgAC)
+        let (as7, arhr7, ah7, aac7, agl7, asys7, adia7) = await (avgS, avgRHR, avgH, avgAC, avgGL, avgSys, avgDia)
         todayHealth.avgSteps = as7
         todayHealth.avgRestingHR = arhr7
         todayHealth.avgHRV = ah7
         todayHealth.avgActiveCalories = aac7
+        todayHealth.avgBloodGlucose = agl7
+        todayHealth.avgSystolic = asys7
+        todayHealth.avgDiastolic = adia7
 
-        // Fetch sparklines
+        // Sparklines
         todayHealth.stepsHistory = await fetchDailyValues(.stepCount, unit: .count(), days: 7, cumulative: true)
         todayHealth.restingHRHistory = await fetchDailyValues(.restingHeartRate, unit: .count().unitDivided(by: .minute()), days: 7, cumulative: false)
         todayHealth.hrvHistory = await fetchDailyValues(.heartRateVariabilitySDNN, unit: .secondUnit(with: .milli), days: 7, cumulative: false)
+        todayHealth.bloodGlucoseHistory = await fetchDailyValues(.bloodGlucose, unit: HKUnit(from: "mg/dL"), days: 7, cumulative: false)
+        todayHealth.systolicHistory = await fetchDailyValues(.bloodPressureSystolic, unit: .millimeterOfMercury(), days: 7, cumulative: false)
 
         // Workouts
         recentWorkouts = await fetchRecentWorkouts(days: 1)
 
-        // Calculate score & insights
-        healthScore = calculateHealthScore()
+        // Generate insights
         insights = generateInsights()
     }
 
@@ -118,6 +147,19 @@ class HealthKitManager: ObservableObject {
         return await withCheckedContinuation { continuation in
             let query = HKStatisticsQuery(quantityType: type, quantitySamplePredicate: predicate, options: .discreteAverage) { _, result, _ in
                 let value = result?.averageQuantity()?.doubleValue(for: unit) ?? 0
+                continuation.resume(returning: value)
+            }
+            store.execute(query)
+        }
+    }
+
+    private func fetchLatestValue(_ identifier: HKQuantityTypeIdentifier, unit: HKUnit) async -> Double {
+        let type = HKQuantityType(identifier)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(sampleType: type, predicate: nil, limit: 1, sortDescriptors: [sort]) { _, samples, _ in
+                let value = (samples?.first as? HKQuantitySample)?.quantity.doubleValue(for: unit) ?? 0
                 continuation.resume(returning: value)
             }
             store.execute(query)
@@ -220,9 +262,9 @@ class HealthKitManager: ObservableObject {
         }
     }
 
+    // MARK: - Full Sync (2 years of data)
+
     func fetchAllForSync(since: Date) async -> SyncPayload {
-        // Fetch all vitals since last sync
-        var vitals: [VitalRecord] = []
         let metrics: [(HKQuantityTypeIdentifier, String, HKUnit)] = [
             (.heartRate, "heart_rate", .count().unitDivided(by: .minute())),
             (.restingHeartRate, "resting_heart_rate", .count().unitDivided(by: .minute())),
@@ -230,13 +272,26 @@ class HealthKitManager: ObservableObject {
             (.oxygenSaturation, "blood_oxygen", .percent()),
             (.stepCount, "steps", .count()),
             (.activeEnergyBurned, "active_calories", .kilocalorie()),
+            (.basalEnergyBurned, "basal_calories", .kilocalorie()),
             (.appleExerciseTime, "exercise_minutes", .minute()),
             (.bodyMass, "weight", .gramUnit(with: .kilo)),
             (.vo2Max, "vo2_max", HKUnit(from: "ml/kg*min")),
+            (.respiratoryRate, "respiratory_rate", .count().unitDivided(by: .minute())),
+            (.bloodGlucose, "blood_glucose", HKUnit(from: "mg/dL")),
+            (.bloodPressureSystolic, "blood_pressure_systolic", .millimeterOfMercury()),
+            (.bloodPressureDiastolic, "blood_pressure_diastolic", .millimeterOfMercury()),
+            (.bodyFatPercentage, "body_fat_percentage", .percent()),
+            (.leanBodyMass, "lean_body_mass", .gramUnit(with: .kilo)),
+            (.boneMineralDensity, "bone_mineral_density", HKUnit.gramUnit(with: .none).unitDivided(by: HKUnit(from: "cm^2"))),
+            (.walkingHeartRateAverage, "walking_heart_rate_avg", .count().unitDivided(by: .minute())),
+            (.flightsClimbed, "flights_climbed", .count()),
+            (.distanceWalkingRunning, "distance", .meter()),
         ]
 
+        var vitals: [VitalRecord] = []
+
         for (identifier, name, unit) in metrics {
-            let samples = await fetchSamples(identifier, since: since)
+            let samples = await fetchSamples(identifier, since: since, limit: 5000)
             for sample in samples {
                 vitals.append(VitalRecord(
                     metricType: name,
@@ -247,7 +302,8 @@ class HealthKitManager: ObservableObject {
             }
         }
 
-        let workoutRecords = await fetchRecentWorkouts(days: 7).map { w in
+        // Workouts (last 2 years)
+        let workoutRecords = await fetchRecentWorkouts(days: 730).map { w in
             WorkoutRecord(
                 workoutType: w.typeName.lowercased(),
                 durationMinutes: w.durationMinutes,
@@ -260,107 +316,155 @@ class HealthKitManager: ObservableObject {
             )
         }
 
-        return SyncPayload(vitals: vitals, workouts: workoutRecords, sleepSessions: [])
+        // Sleep
+        let sleepRecords = await fetchSleepData(since: since)
+
+        return SyncPayload(vitals: vitals, workouts: workoutRecords, sleepSessions: sleepRecords)
     }
 
-    private func fetchSamples(_ identifier: HKQuantityTypeIdentifier, since: Date) async -> [HKQuantitySample] {
+    private func fetchSamples(_ identifier: HKQuantityTypeIdentifier, since: Date, limit: Int = 5000) async -> [HKQuantitySample] {
         let type = HKQuantityType(identifier)
         let predicate = HKQuery.predicateForSamples(withStart: since, end: Date(), options: .strictStartDate)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
 
         return await withCheckedContinuation { continuation in
-            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: 1000, sortDescriptors: [sort]) { _, samples, _ in
+            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: limit, sortDescriptors: [sort]) { _, samples, _ in
                 continuation.resume(returning: (samples as? [HKQuantitySample]) ?? [])
             }
             store.execute(query)
         }
     }
 
-    // MARK: - Health Score
+    private func fetchSleepData(since: Date) async -> [SleepRecord] {
+        let sleepType = HKCategoryType(.sleepAnalysis)
+        let predicate = HKQuery.predicateForSamples(withStart: since, end: Date(), options: .strictStartDate)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
 
-    func calculateHealthScore() -> Int {
-        var score = 50.0
-
-        // HRV component (higher is better)
-        if todayHealth.avgHRV > 0 && todayHealth.hrv > 0 {
-            let hrvRatio = todayHealth.hrv / todayHealth.avgHRV
-            score += (hrvRatio - 1.0) * 30 // +/- 30 points based on HRV vs average
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: 5000, sortDescriptors: [sort]) { _, samples, _ in
+                let records = (samples as? [HKCategorySample])?.compactMap { sample -> SleepRecord? in
+                    let stage: String
+                    if #available(iOS 16.0, *) {
+                        switch HKCategoryValueSleepAnalysis(rawValue: sample.value) {
+                        case .asleepDeep: stage = "deep"
+                        case .asleepREM: stage = "rem"
+                        case .asleepCore: stage = "core"
+                        case .awake: stage = "awake"
+                        case .asleepUnspecified: stage = "asleep"
+                        case .inBed: stage = "in_bed"
+                        default: stage = "unknown"
+                        }
+                    } else {
+                        switch HKCategoryValueSleepAnalysis(rawValue: sample.value) {
+                        case .asleep: stage = "asleep"
+                        case .inBed: stage = "in_bed"
+                        case .awake: stage = "awake"
+                        default: stage = "unknown"
+                        }
+                    }
+                    return SleepRecord(sleepStage: stage, startedAt: sample.startDate, endedAt: sample.endDate)
+                } ?? []
+                continuation.resume(returning: records)
+            }
+            store.execute(query)
         }
-
-        // Resting HR component (lower is better)
-        if todayHealth.avgRestingHR > 0 && todayHealth.restingHeartRate > 0 {
-            let hrRatio = todayHealth.restingHeartRate / todayHealth.avgRestingHR
-            score -= (hrRatio - 1.0) * 20 // penalty for elevated HR
-        }
-
-        // Activity component
-        if todayHealth.avgSteps > 0 {
-            let stepRatio = min(todayHealth.steps / todayHealth.avgSteps, 1.5)
-            score += (stepRatio - 0.5) * 10
-        }
-
-        // Exercise component
-        if todayHealth.exerciseMinutes >= 30 {
-            score += 10
-        } else if todayHealth.exerciseMinutes >= 15 {
-            score += 5
-        }
-
-        return max(0, min(100, Int(score)))
     }
 
-    // MARK: - Insights
+    // MARK: - Insights (medical-grade)
 
     func generateInsights() -> [HealthInsight] {
         var insights: [HealthInsight] = []
 
-        if todayHealth.avgHRV > 0 && todayHealth.hrv > 0 {
-            let delta = ((todayHealth.hrv - todayHealth.avgHRV) / todayHealth.avgHRV) * 100
-            if delta > 10 {
-                insights.append(HealthInsight(
-                    icon: "arrow.up.heart.fill",
-                    color: "green",
-                    message: "Your HRV is \(Int(delta))% above your 7-day average — your body is well-recovered today."
-                ))
-            } else if delta < -15 {
-                insights.append(HealthInsight(
-                    icon: "heart.text.square.fill",
-                    color: "orange",
-                    message: "HRV is \(Int(abs(delta)))% below average. Consider lighter activity and extra rest today."
-                ))
-            }
-        }
-
-        if todayHealth.avgRestingHR > 0 && todayHealth.restingHeartRate > 0 {
-            let delta = todayHealth.restingHeartRate - todayHealth.avgRestingHR
-            if delta > 5 {
-                insights.append(HealthInsight(
-                    icon: "waveform.path.ecg",
-                    color: "red",
-                    message: "Resting HR is up \(Int(delta)) bpm this week — could be stress, poor sleep, or early illness."
-                ))
-            }
-        }
-
-        if todayHealth.steps < 2000 {
-            let hour = Calendar.current.component(.hour, from: Date())
-            if hour >= 14 {
-                insights.append(HealthInsight(
-                    icon: "figure.walk",
-                    color: "yellow",
-                    message: "You've been pretty sedentary today. Even a 10-minute walk helps."
-                ))
-            }
-        }
-
-        if insights.isEmpty {
+        // Critical: Sustained high HR
+        if todayHealth.restingHeartRate > 100 {
             insights.append(HealthInsight(
-                icon: "sparkles",
-                color: "blue",
-                message: "Looking good today! Keep up your healthy routine."
+                icon: "heart.fill",
+                color: "red",
+                title: "Elevated Resting Heart Rate",
+                message: "Resting HR is \(Int(todayHealth.restingHeartRate)) bpm — sustained above 100 may indicate tachycardia. Monitor closely.",
+                severity: .critical
+            ))
+        } else if todayHealth.restingHeartRate > 0 && todayHealth.restingHeartRate < 40 {
+            insights.append(HealthInsight(
+                icon: "heart.fill",
+                color: "red",
+                title: "Low Resting Heart Rate",
+                message: "Resting HR is \(Int(todayHealth.restingHeartRate)) bpm — below 40 may indicate bradycardia.",
+                severity: .critical
             ))
         }
 
-        return insights
+        // Critical: HRV drop > 30%
+        if todayHealth.avgHRV > 0 && todayHealth.hrv > 0 {
+            let dropPct = ((todayHealth.avgHRV - todayHealth.hrv) / todayHealth.avgHRV) * 100
+            if dropPct > 30 {
+                insights.append(HealthInsight(
+                    icon: "waveform.path.ecg",
+                    color: "red",
+                    title: "Significant HRV Drop",
+                    message: "HRV is \(Int(dropPct))% below your baseline (\(Int(todayHealth.hrv)) vs avg \(Int(todayHealth.avgHRV)) ms). Your autonomic nervous system is stressed.",
+                    severity: .warning
+                ))
+            } else if dropPct > 15 {
+                insights.append(HealthInsight(
+                    icon: "waveform.path.ecg",
+                    color: "orange",
+                    title: "HRV Below Baseline",
+                    message: "HRV is \(Int(dropPct))% below average. Consider lighter activity today.",
+                    severity: .attention
+                ))
+            } else if dropPct < -10 {
+                insights.append(HealthInsight(
+                    icon: "arrow.up.heart.fill",
+                    color: "green",
+                    title: "Strong Recovery",
+                    message: "HRV is \(Int(abs(dropPct)))% above your 7-day average — your body is well-recovered.",
+                    severity: .info
+                ))
+            }
+        }
+
+        // Critical: Blood glucose
+        if todayHealth.bloodGlucose > 200 {
+            insights.append(HealthInsight(
+                icon: "drop.fill",
+                color: "red",
+                title: "High Blood Glucose",
+                message: "Glucose reading of \(Int(todayHealth.bloodGlucose)) mg/dL is significantly elevated. Monitor for sustained highs.",
+                severity: .critical
+            ))
+        } else if todayHealth.bloodGlucose > 0 && todayHealth.bloodGlucose < 60 {
+            insights.append(HealthInsight(
+                icon: "drop.fill",
+                color: "red",
+                title: "Low Blood Glucose",
+                message: "Glucose at \(Int(todayHealth.bloodGlucose)) mg/dL — hypoglycemic range. Consider eating something.",
+                severity: .critical
+            ))
+        }
+
+        // Critical: Blood pressure
+        if todayHealth.bloodPressureSystolic > 160 || todayHealth.bloodPressureDiastolic > 100 {
+            insights.append(HealthInsight(
+                icon: "heart.circle.fill",
+                color: "red",
+                title: "High Blood Pressure",
+                message: "BP at \(Int(todayHealth.bloodPressureSystolic))/\(Int(todayHealth.bloodPressureDiastolic)) mmHg is in hypertensive range.",
+                severity: .critical
+            ))
+        }
+
+        // If nothing noteworthy, show a reassuring message
+        if insights.isEmpty {
+            insights.append(HealthInsight(
+                icon: "checkmark.seal.fill",
+                color: "green",
+                title: "All Clear",
+                message: "Your vitals are within normal ranges today. Keep it up.",
+                severity: .info
+            ))
+        }
+
+        return insights.sorted { $0.severity > $1.severity }
     }
 }
