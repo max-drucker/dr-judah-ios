@@ -37,7 +37,9 @@ struct AskJudahView: View {
                     }
                     .onChange(of: messages.count) {
                         withAnimation {
-                            proxy.scrollTo(messages.last?.id.uuidString ?? "loading", anchor: .bottom)
+                            if let lastMessage = messages.last {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
                         }
                     }
                 }
