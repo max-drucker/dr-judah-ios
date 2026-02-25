@@ -23,10 +23,22 @@ class SupabaseManager {
     // MARK: - Sync Health Data
 
     func syncHealthData(data: SyncPayload) async throws {
-        // Sync vitals in batches of 500
+        // Sync vitals in batches of 500, deduplicating within each batch
         if !data.vitals.isEmpty {
-            let batches = stride(from: 0, to: data.vitals.count, by: 500).map {
-                Array(data.vitals[$0..<min($0 + 500, data.vitals.count)])
+            // Deduplicate: keep last value per (metricType, recordedAt)
+            var seen = Set<String>()
+            var dedupedVitals: [VitalRecord] = []
+            for vital in data.vitals.reversed() {
+                let key = "\(vital.metricType)|\(isoFormatter.string(from: vital.recordedAt))"
+                if !seen.contains(key) {
+                    seen.insert(key)
+                    dedupedVitals.append(vital)
+                }
+            }
+            dedupedVitals.reverse()
+
+            let batches = stride(from: 0, to: dedupedVitals.count, by: 500).map {
+                Array(dedupedVitals[$0..<min($0 + 500, dedupedVitals.count)])
             }
             for batch in batches {
                 let rows = batch.map { vital -> [String: AnyJSON] in
@@ -40,7 +52,7 @@ class SupabaseManager {
                     ]
                 }
                 try await client.from("apple_health_vitals")
-                    .upsert(rows, onConflict: "user_id,metric_type,recorded_at")
+                    .upsert(rows, ignoreDuplicates: true, onConflict: "user_id,metric_type,recorded_at")
                     .execute()
             }
         }
@@ -63,14 +75,25 @@ class SupabaseManager {
                 return row
             }
             try await client.from("apple_health_workouts")
-                .upsert(rows, onConflict: "user_id,workout_type,started_at")
+                .upsert(rows, ignoreDuplicates: true, onConflict: "user_id,workout_type,started_at")
                 .execute()
         }
 
-        // Sync sleep in batches
+        // Sync sleep in batches, deduplicating
         if !data.sleepSessions.isEmpty {
-            let batches = stride(from: 0, to: data.sleepSessions.count, by: 500).map {
-                Array(data.sleepSessions[$0..<min($0 + 500, data.sleepSessions.count)])
+            var seenSleep = Set<String>()
+            var dedupedSleep: [SleepRecord] = []
+            for s in data.sleepSessions.reversed() {
+                let key = "\(s.sleepStage)|\(isoFormatter.string(from: s.startedAt))"
+                if !seenSleep.contains(key) {
+                    seenSleep.insert(key)
+                    dedupedSleep.append(s)
+                }
+            }
+            dedupedSleep.reverse()
+
+            let batches = stride(from: 0, to: dedupedSleep.count, by: 500).map {
+                Array(dedupedSleep[$0..<min($0 + 500, dedupedSleep.count)])
             }
             for batch in batches {
                 let rows = batch.map { s -> [String: AnyJSON] in
@@ -83,7 +106,7 @@ class SupabaseManager {
                     ]
                 }
                 try await client.from("apple_health_sleep")
-                    .upsert(rows, onConflict: "user_id,sleep_stage,started_at")
+                    .upsert(rows, ignoreDuplicates: true, onConflict: "user_id,sleep_stage,started_at")
                     .execute()
             }
         }
