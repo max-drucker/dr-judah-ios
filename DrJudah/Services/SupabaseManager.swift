@@ -52,7 +52,7 @@ class SupabaseManager {
                     ]
                 }
                 try await client.from("apple_health_vitals")
-                    .upsert(rows, ignoreDuplicates: true, onConflict: "user_id,metric_type,recorded_at")
+                    .upsert(rows, onConflict: "user_id,metric_type,recorded_at")
                     .execute()
             }
         }
@@ -75,7 +75,7 @@ class SupabaseManager {
                 return row
             }
             try await client.from("apple_health_workouts")
-                .upsert(rows, ignoreDuplicates: true, onConflict: "user_id,workout_type,started_at")
+                .upsert(rows, onConflict: "user_id,workout_type,started_at")
                 .execute()
         }
 
@@ -106,7 +106,7 @@ class SupabaseManager {
                     ]
                 }
                 try await client.from("apple_health_sleep")
-                    .upsert(rows, ignoreDuplicates: true, onConflict: "user_id,sleep_stage,started_at")
+                    .upsert(rows, onConflict: "user_id,sleep_stage,started_at")
                     .execute()
             }
         }
