@@ -1,0 +1,30 @@
+name: DrJudah
+options:
+  bundleIdPrefix: com.thedruckers
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "16.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: ""
+    PRODUCT_BUNDLE_IDENTIFIER: com.thedruckers.drjudah
+    SWIFT_VERSION: "5.9"
+targets:
+  DrJudah:
+    type: application
+    platform: iOS
+    sources:
+      - DrJudah
+    settings:
+      base:
+        INFOPLIST_FILE: DrJudah/Info.plist
+        CODE_SIGN_ENTITLEMENTS: DrJudah/DrJudah.entitlements
+        TARGETED_DEVICE_FAMILY: "1"
+    dependencies:
+      - package: Supabase
+        products:
+          - Supabase
+packages:
+  Supabase:
+    url: https://github.com/supabase-community/supabase-swift
+    from: "2.0.0"
