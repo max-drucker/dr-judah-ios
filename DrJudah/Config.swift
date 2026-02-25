@@ -7,7 +7,7 @@ enum Config {
     static let deepLinkScheme = "drjudah"
 
     // Hardcoded user — auth is disabled
-    static let userId = "00000000-0000-0000-0000-000000000001"
+    static let userId = "22ab2cee-0fc5-4abc-ac5e-356a931b7f95"
     static let userEmail = "max@thedruckers.com"
     static let userName = "Max"
 }
