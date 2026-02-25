@@ -13,20 +13,10 @@ struct DrJudahApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if authManager.isAuthenticated {
-                    ContentView()
-                        .environmentObject(authManager)
-                        .environmentObject(healthKitManager)
-                        .environmentObject(syncManager)
-                } else {
-                    LoginView()
-                        .environmentObject(authManager)
-                }
-            }
-            .onOpenURL { url in
-                authManager.handleDeepLink(url: url)
-            }
+            ContentView()
+                .environmentObject(authManager)
+                .environmentObject(healthKitManager)
+                .environmentObject(syncManager)
         }
     }
 
