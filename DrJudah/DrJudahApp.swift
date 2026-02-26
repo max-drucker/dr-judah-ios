@@ -4,6 +4,7 @@ import SwiftUI
 struct DrJudahApp: App {
     @StateObject private var healthKitManager = HealthKitManager()
     @StateObject private var syncManager = BackgroundSyncManager()
+    @StateObject private var apiManager = APIManager()
 
     init() {
         BackgroundSyncManager.registerBackgroundTasks()
@@ -15,6 +16,7 @@ struct DrJudahApp: App {
             ContentView()
                 .environmentObject(healthKitManager)
                 .environmentObject(syncManager)
+                .environmentObject(apiManager)
         }
     }
 

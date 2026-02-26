@@ -4,6 +4,11 @@ extension Color {
     static let drJudahBlue = Color(hex: "2563EB")
     static let drJudahIndigo = Color(hex: "4338CA")
 
+    static let drJudahGreen = Color(hex: "22C55E")
+    static let drJudahRed = Color(hex: "EF4444")
+    static let drJudahOrange = Color(hex: "F97316")
+    static let drJudahYellow = Color(hex: "EAB308")
+
     static let drJudahGradient = LinearGradient(
         colors: [.drJudahBlue, .drJudahIndigo],
         startPoint: .topLeading,

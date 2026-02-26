@@ -7,23 +7,35 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            HomeView()
+            DashboardView()
                 .tabItem {
-                    Label("Home", systemImage: "house.fill")
+                    Label("Dashboard", systemImage: "square.grid.2x2.fill")
                 }
                 .tag(0)
+
+            InsightsView()
+                .tabItem {
+                    Label("Insights", systemImage: "lightbulb.fill")
+                }
+                .tag(1)
 
             AskJudahView()
                 .tabItem {
                     Label("Ask Judah", systemImage: "sparkles")
                 }
-                .tag(1)
-
-            SyncView()
-                .tabItem {
-                    Label("Sync", systemImage: "arrow.triangle.2.circlepath")
-                }
                 .tag(2)
+
+            VitalsView()
+                .tabItem {
+                    Label("Vitals", systemImage: "waveform.path.ecg")
+                }
+                .tag(3)
+
+            MoreView()
+                .tabItem {
+                    Label("More", systemImage: "ellipsis.circle.fill")
+                }
+                .tag(4)
         }
         .tint(.drJudahBlue)
         .task {
