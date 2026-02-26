@@ -5,8 +5,6 @@ struct DashboardView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var apiManager: APIManager
 
-    @State private var showWebSheet = false
-    @State private var webURL: URL?
     @State private var isRefreshing = false
 
     var body: some View {
@@ -54,9 +52,12 @@ struct DashboardView: View {
                 _ = await (api, hk)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showWebSheet) {
-                if let url = webURL {
-                    WebViewSheet(url: url)
+            .navigationDestination(for: String.self) { dest in
+                switch dest {
+                case "/sleep": SleepView()
+                case "/labs": LabsView()
+                case "/imaging": ImagingView()
+                default: EmptyView()
                 }
             }
             .task {
@@ -160,11 +161,13 @@ struct DashboardView: View {
                 GridItem(.flexible(), spacing: 10),
             ], spacing: 10) {
                 ForEach(HealthStatusCategory.defaultCategories) { category in
-                    HealthStatusTile(category: category) {
-                        if let path = category.webPath {
-                            webURL = URL(string: Config.apiBaseURL + path)
-                            showWebSheet = true
+                    if let path = category.webPath {
+                        NavigationLink(value: path) {
+                            HealthStatusTileContent(category: category)
                         }
+                        .buttonStyle(.plain)
+                    } else {
+                        HealthStatusTileContent(category: category)
                     }
                 }
             }
@@ -409,5 +412,54 @@ struct DashboardView: View {
         case "yellow": return .yellow
         default: return .orange
         }
+    }
+}
+
+// MARK: - Health Status Tile Content (inline, no web links)
+
+struct HealthStatusTileContent: View {
+    let category: HealthStatusCategory
+
+    private var statusColor: Color {
+        switch category.status {
+        case .green: return .green
+        case .yellow: return .yellow
+        case .orange: return .orange
+        case .red: return .red
+        case .gray: return .gray
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: category.icon)
+                    .font(.title3)
+                    .foregroundStyle(statusColor)
+                Spacer()
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 10, height: 10)
+                    .shadow(color: statusColor.opacity(0.5), radius: 3)
+            }
+            Text(category.name)
+                .font(.subheadline.bold())
+                .foregroundStyle(.primary)
+            Text(category.summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(statusColor.opacity(0.2), lineWidth: 1)
+        )
     }
 }

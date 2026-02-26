@@ -16,6 +16,7 @@
 		243826AE0ED7EFC64BB7106A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4BFD9BE44C3C5A6D1BAEB327 /* Assets.xcassets */; };
 		286E47E59EE5B1ABCBC129FE /* MedicationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F254DB59BB6FE4ADC889314 /* MedicationsView.swift */; };
 		366B900F2D4BE66CA4002B56 /* HealthStatusTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57FBCC90FAD1DFAE12CCDC6F /* HealthStatusTile.swift */; };
+		2586650DC8794B1A98D5733C /* HealthStatusTileContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD2A1C021A4A4DB0B0289C5D /* HealthStatusTileContent.swift */; };
 		37B15AFA2D61A60CC8288A8D /* Color+DrJudah.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5418974094A02ECFF191EA4A /* Color+DrJudah.swift */; };
 		3AEEA87114BEFF13037B8D7C /* DataTypeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF3BF9866CF0A4297D423D0 /* DataTypeRow.swift */; };
 		4018F15162BC4EA38530F8A0 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 890978350803D2152B07784B /* ChatMessage.swift */; };
@@ -79,6 +80,7 @@
 		54C418F8CFA1F7921D431609 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		54F63EF8AC9D2C0D6620EDCF /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
 		57FBCC90FAD1DFAE12CCDC6F /* HealthStatusTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthStatusTile.swift; sourceTree = "<group>"; };
+		FD2A1C021A4A4DB0B0289C5D /* HealthStatusTileContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthStatusTileContent.swift; sourceTree = "<group>"; };
 		5BE177E954201192C0140EBA /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
 		5CAAFF0F8E8EEF66EFCD2778 /* SyncView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncView.swift; sourceTree = "<group>"; };
 		5E4F7A9774DAF05E7A184DF4 /* HKQuantityType+Name.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HKQuantityType+Name.swift"; sourceTree = "<group>"; };
@@ -135,6 +137,7 @@
 			children = (
 				54C418F8CFA1F7921D431609 /* DashboardView.swift */,
 				57FBCC90FAD1DFAE12CCDC6F /* HealthStatusTile.swift */,
+				FD2A1C021A4A4DB0B0289C5D /* HealthStatusTileContent.swift */,
 				C155E28F7E0DEA65B505181C /* SignalCard.swift */,
 				CD40F4EA97C12CE0002DC28C /* TrendChartView.swift */,
 			);

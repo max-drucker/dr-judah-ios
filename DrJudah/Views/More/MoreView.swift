@@ -4,8 +4,6 @@ import UniformTypeIdentifiers
 struct MoreView: View {
     @EnvironmentObject var syncManager: BackgroundSyncManager
 
-    @State private var showWebSheet = false
-    @State private var webURL: URL?
     @State private var showOmronImporter = false
     @State private var omronImportResult: String?
     @State private var isImporting = false
@@ -170,11 +168,6 @@ struct MoreView: View {
                 }
             }
             .navigationTitle("More")
-            .sheet(isPresented: $showWebSheet) {
-                if let url = webURL {
-                    WebViewSheet(url: url)
-                }
-            }
             .fileImporter(
                 isPresented: $showOmronImporter,
                 allowedContentTypes: [UTType.commaSeparatedText, UTType.plainText],
@@ -199,32 +192,6 @@ struct MoreView: View {
 
                 Text(title)
                     .foregroundStyle(.primary)
-            }
-        }
-    }
-
-    // MARK: - Web Link Row
-
-    private func webLink(icon: String, title: String, color: Color, path: String) -> some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            webURL = URL(string: Config.apiBaseURL + path)
-            showWebSheet = true
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.body)
-                    .foregroundStyle(color)
-                    .frame(width: 28)
-
-                Text(title)
-                    .foregroundStyle(.primary)
-
-                Spacer()
-
-                Image(systemName: "safari")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
             }
         }
     }
