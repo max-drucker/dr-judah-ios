@@ -16,62 +16,60 @@ struct AskJudahView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Messages
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            if messages.isEmpty && !isLoading {
-                                emptyState
-                                    .padding(.top, 60)
-                            }
-
-                            ForEach(messages) { message in
-                                MessageBubble(message: message)
-                                    .id(message.id)
-                            }
-
-                            if isLoading {
-                                HStack {
-                                    TypingIndicator()
-                                    Spacer()
-                                }
-                                .padding(.horizontal)
-                                .id("loading")
-                            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        if messages.isEmpty && !isLoading {
+                            emptyState
+                                .padding(.top, 60)
                         }
-                        .padding()
-                    }
-                    .onChange(of: messages.count) {
-                        withAnimation {
-                            if let lastMessage = messages.last {
-                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+
+                        ForEach(messages) { message in
+                            MessageBubble(message: message)
+                                .id(message.id)
+                        }
+
+                        if isLoading {
+                            HStack {
+                                TypingIndicator()
+                                Spacer()
                             }
+                            .padding(.horizontal)
+                            .id("loading")
+                        }
+                    }
+                    .padding()
+                }
+                .onChange(of: messages.count) {
+                    withAnimation {
+                        if let lastMessage = messages.last {
+                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
                         }
                     }
                 }
+            }
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 0) {
+                    Divider()
+                    HStack(spacing: 12) {
+                        TextField("Ask Dr. Judah anything…", text: $inputText, axis: .vertical)
+                            .textFieldStyle(.plain)
+                            .lineLimit(1...4)
+                            .focused($inputFocused)
 
-                Divider()
-
-                // Input
-                HStack(spacing: 12) {
-                    TextField("Ask Dr. Judah anything…", text: $inputText, axis: .vertical)
-                        .textFieldStyle(.plain)
-                        .lineLimit(1...4)
-                        .focused($inputFocused)
-
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        sendMessage()
-                    } label: {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(inputText.isEmpty ? .gray : Color.drJudahBlue)
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            sendMessage()
+                        } label: {
+                            Image(systemName: "arrow.up.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(inputText.isEmpty ? .gray : Color.drJudahBlue)
+                        }
+                        .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
                     }
-                    .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
+                    .padding(.horizontal)
+                    .padding(.vertical, 10)
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 10)
                 .background(Color(.systemBackground))
             }
             .navigationTitle("Ask Judah")
