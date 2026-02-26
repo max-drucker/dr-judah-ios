@@ -1,10 +1,18 @@
 import SwiftUI
 
 struct AskJudahView: View {
+    @State private var conversations: [Conversation] = []
+    @State private var activeConversationId: String?
     @State private var messages: [ChatMessage] = []
     @State private var inputText = ""
     @State private var isLoading = false
+    @State private var isLoadingConversations = false
+    @State private var showHistory = false
     @FocusState private var inputFocused: Bool
+
+    private var activeConversation: Conversation? {
+        conversations.first { $0.id == activeConversationId }
+    }
 
     var body: some View {
         NavigationStack {
@@ -13,7 +21,7 @@ struct AskJudahView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 12) {
-                            if messages.isEmpty {
+                            if messages.isEmpty && !isLoading {
                                 emptyState
                                     .padding(.top, 60)
                             }
@@ -69,9 +77,26 @@ struct AskJudahView: View {
             .navigationTitle("Ask Judah")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showHistory.toggle()
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.body)
+                    }
+                }
+
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        startNewConversation()
+                    } label: {
+                        Image(systemName: "plus.bubble")
+                            .font(.body)
+                    }
+
                     Button {
                         messages.removeAll()
+                        activeConversationId = nil
                     } label: {
                         Image(systemName: "trash")
                             .font(.caption)
@@ -79,8 +104,78 @@ struct AskJudahView: View {
                     .disabled(messages.isEmpty)
                 }
             }
+            .sheet(isPresented: $showHistory) {
+                conversationHistorySheet
+            }
+            .task {
+                await loadConversations()
+            }
         }
     }
+
+    // MARK: - Conversation History Sheet
+
+    private var conversationHistorySheet: some View {
+        NavigationStack {
+            Group {
+                if isLoadingConversations {
+                    ProgressView("Loading conversations…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if conversations.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "bubble.left.and.bubble.right")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.secondary)
+                        Text("No conversations yet")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List {
+                        ForEach(conversations, id: \.id) { conv in
+                            Button {
+                                loadConversation(conv)
+                                showHistory = false
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(conv.title)
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(2)
+
+                                    HStack {
+                                        Text("\(conv.messages.count) messages")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+
+                                        Spacer()
+
+                                        Text(formatRelativeDate(conv.updatedAt))
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Conversations")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        showHistory = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    // MARK: - Empty State
 
     private var emptyState: some View {
         VStack(spacing: 16) {
@@ -125,6 +220,87 @@ struct AskJudahView: View {
         }
     }
 
+    // MARK: - Networking
+
+    private func loadConversations() async {
+        isLoadingConversations = true
+        defer { isLoadingConversations = false }
+
+        guard let url = URL(string: "\(Config.apiBaseURL)/api/conversations") else { return }
+        var request = URLRequest(url: url)
+        request.setValue(Config.userEmail, forHTTPHeaderField: "X-User-Email")
+
+        do {
+            let (data, _) = try await URLSession.shared.data(for: request)
+            let decoded = try JSONDecoder().decode([Conversation].self, from: data)
+            conversations = decoded
+        } catch {
+            print("Failed to load conversations: \(error)")
+        }
+    }
+
+    private func loadConversation(_ conv: Conversation) {
+        activeConversationId = conv.id
+        messages = conv.messages.map { msg in
+            ChatMessage(
+                role: msg.role == "user" ? .user : .assistant,
+                content: msg.content
+            )
+        }
+    }
+
+    private func saveConversation() async {
+        let msgDicts = messages.map { ["role": $0.role.rawValue, "content": $0.content] }
+
+        let title: String
+        if let first = messages.first(where: { $0.role == .user }) {
+            title = String(first.content.prefix(50))
+        } else {
+            title = "New conversation"
+        }
+
+        if let existingId = activeConversationId {
+            // Update
+            let body: [String: Any] = [
+                "id": existingId,
+                "messages": msgDicts,
+                "title": title,
+            ]
+            guard let url = URL(string: "\(Config.apiBaseURL)/api/conversations") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "PUT"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(Config.userEmail, forHTTPHeaderField: "X-User-Email")
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+            _ = try? await URLSession.shared.data(for: request)
+        } else {
+            // Create
+            let body: [String: Any] = [
+                "title": title,
+                "messages": msgDicts,
+                "model": "anthropic/claude-sonnet-4",
+            ]
+            guard let url = URL(string: "\(Config.apiBaseURL)/api/conversations") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(Config.userEmail, forHTTPHeaderField: "X-User-Email")
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+            if let (data, _) = try? await URLSession.shared.data(for: request),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let id = json["id"] as? String {
+                activeConversationId = id
+            }
+        }
+    }
+
+    private func startNewConversation() {
+        messages.removeAll()
+        activeConversationId = nil
+        inputFocused = true
+    }
+
     private func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
@@ -136,13 +312,15 @@ struct AskJudahView: View {
 
         Task {
             do {
-                // Send to web API — it has FULL context (labs, genetics, imaging, supplements, Apple Health)
                 let response = try await SupabaseManager.shared.askJudah(
                     message: text,
-                    history: Array(messages.dropLast()) // Don't include current message in history
+                    history: Array(messages.dropLast())
                 )
                 let assistantMessage = ChatMessage(role: .assistant, content: response)
                 messages.append(assistantMessage)
+
+                // Save to server (syncs with web app)
+                await saveConversation()
             } catch {
                 let errorMessage = ChatMessage(
                     role: .assistant,
@@ -154,7 +332,45 @@ struct AskJudahView: View {
             isLoading = false
         }
     }
+
+    // MARK: - Helpers
+
+    private func formatRelativeDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date = formatter.date(from: dateString) else {
+            // Try without fractional seconds
+            let f2 = ISO8601DateFormatter()
+            guard let d2 = f2.date(from: dateString) else { return dateString }
+            return RelativeDateTimeFormatter().localizedString(for: d2, relativeTo: Date())
+        }
+        return RelativeDateTimeFormatter().localizedString(for: date, relativeTo: Date())
+    }
 }
+
+// MARK: - Conversation Model (API sync)
+
+struct Conversation: Codable, Identifiable {
+    let id: String
+    let title: String
+    let messages: [ConversationMessage]
+    let model: String?
+    let createdAt: String
+    let updatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, messages, model
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct ConversationMessage: Codable {
+    let role: String
+    let content: String
+}
+
+// MARK: - Typing Indicator
 
 struct TypingIndicator: View {
     @State private var phase = 0.0

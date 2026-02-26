@@ -3,6 +3,7 @@ import SwiftUI
 struct InsightCard: View {
     let insight: KeyInsight
     @State private var isExpanded = false
+    @Environment(\.colorScheme) private var colorScheme
 
     private var severityColor: Color {
         switch insight.severity {
@@ -12,11 +13,15 @@ struct InsightCard: View {
         }
     }
 
-    private var backgroundGradient: [Color] {
-        switch insight.severity {
-        case .critical: return [Color(hex: "FEF2F2"), Color(hex: "FEE2E2")]
-        case .warning: return [Color(hex: "FFFBEB"), Color(hex: "FEF3C7")]
-        case .info: return [Color(hex: "F0FDF4"), Color(hex: "DCFCE7")]
+    private var cardBackground: some ShapeStyle {
+        if colorScheme == .dark {
+            return AnyShapeStyle(Color(.secondarySystemGroupedBackground))
+        } else {
+            switch insight.severity {
+            case .critical: return AnyShapeStyle(LinearGradient(colors: [Color(hex: "FEF2F2"), Color(hex: "FEE2E2")], startPoint: .topLeading, endPoint: .bottomTrailing))
+            case .warning: return AnyShapeStyle(LinearGradient(colors: [Color(hex: "FFFBEB"), Color(hex: "FEF3C7")], startPoint: .topLeading, endPoint: .bottomTrailing))
+            case .info: return AnyShapeStyle(LinearGradient(colors: [Color(hex: "F0FDF4"), Color(hex: "DCFCE7")], startPoint: .topLeading, endPoint: .bottomTrailing))
+            }
         }
     }
 
@@ -67,17 +72,11 @@ struct InsightCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: backgroundGradient,
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(cardBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(severityColor.opacity(0.2), lineWidth: 1)
+                    .stroke(severityColor.opacity(colorScheme == .dark ? 0.4 : 0.2), lineWidth: colorScheme == .dark ? 1.5 : 1)
             )
         }
         .buttonStyle(.plain)
