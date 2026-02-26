@@ -3,15 +3,7 @@ import SwiftUI
 struct SleepView: View {
     @StateObject private var api = APIManager.shared
 
-    private var sleepMetrics: [(String, String)] {
-        guard let metrics = api.currentState?.healthMetrics else { return [] }
-        return metrics.compactMap { key, metric in
-            guard key.lowercased().contains("sleep") else { return nil }
-            return (key, metric.summary ?? metric.detail ?? metric.status ?? "–")
-        }.sorted { $0.0 < $1.0 }
-    }
-
-    private var vitalsSleep: [(String, String)] {
+    private var sleepVitals: [(String, String)] {
         guard let vitals = api.currentState?.vitals else { return [] }
         return vitals.compactMap { key, val in
             guard key.lowercased().contains("sleep") else { return nil }
@@ -26,7 +18,7 @@ struct SleepView: View {
                 if api.isLoadingState {
                     ProgressView("Loading sleep data…")
                         .frame(maxWidth: .infinity, minHeight: 200)
-                } else if sleepMetrics.isEmpty && vitalsSleep.isEmpty {
+                } else if sleepVitals.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "bed.double.fill")
                             .font(.system(size: 48))
@@ -43,13 +35,13 @@ struct SleepView: View {
                     }
                     .padding(.vertical, 40)
                 } else {
-                    ForEach(sleepMetrics + vitalsSleep, id: \.0) { key, value in
+                    ForEach(sleepVitals, id: \.0) { key, value in
                         HStack {
                             Image(systemName: "bed.double.fill")
                                 .foregroundStyle(.indigo)
                                 .frame(width: 28)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(formatKey(key))
+                                Text(key)
                                     .font(.subheadline.bold())
                                 Text(value)
                                     .font(.caption)

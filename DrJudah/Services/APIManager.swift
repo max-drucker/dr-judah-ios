@@ -60,7 +60,12 @@ class APIManager: ObservableObject {
         do {
             let data = try await request(path: "/api/dashboard/signals")
             let response = try JSONDecoder().decode(DashboardSignalsResponse.self, from: data)
-            signals = response.signals ?? [:]
+            // Inject label from dict key since API doesn't include it in the value
+            var labeled: [String: Signal] = [:]
+            for (key, sig) in (response.signals ?? [:]) {
+                labeled[key] = Signal(label: key, value: sig.value, unit: sig.unit, emoji: sig.emoji, insight: sig.insight, previous: sig.previous, delta: sig.delta, trend: sig.trend, status: sig.status)
+            }
+            signals = labeled
             vatChart = response.vatChart ?? []
             calcChart = response.calcChart ?? []
             criticalAlerts = response.criticalAlerts ?? []

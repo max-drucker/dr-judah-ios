@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Dashboard Signals Response
 
-struct DashboardSignalsResponse: Codable {
+struct DashboardSignalsResponse: Decodable {
     let signals: [String: Signal]?
     let vatChart: [ChartDataPoint]?
     let calcChart: [ChartDataPoint]?
@@ -10,7 +10,7 @@ struct DashboardSignalsResponse: Codable {
     let overdueScreenings: [OverdueScreening]?
 }
 
-struct Signal: Codable, Identifiable {
+struct Signal: Decodable, Identifiable {
     var id: String { label }
     let label: String
     let value: Double?
@@ -21,6 +21,35 @@ struct Signal: Codable, Identifiable {
     let delta: Double?
     let trend: String?
     let status: String?
+
+    // API returns signals as a dict where key=label, no "label" field in the value
+    // We inject the label from the key during decoding
+    enum CodingKeys: String, CodingKey {
+        case label, value, unit, emoji, insight, previous, delta, trend, status
+        // Also accept API field names
+        case units, flag
+        case prevValue = "prev_value"
+        case prevDate = "prev_date"
+        case date
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.label = (try? container.decode(String.self, forKey: .label)) ?? ""
+        self.value = (try? container.decode(Double.self, forKey: .value))
+        self.unit = (try? container.decode(String.self, forKey: .unit)) ?? (try? container.decode(String.self, forKey: .units))
+        self.emoji = try? container.decode(String.self, forKey: .emoji)
+        self.insight = try? container.decode(String.self, forKey: .insight)
+        self.previous = (try? container.decode(Double.self, forKey: .previous)) ?? (try? container.decode(Double.self, forKey: .prevValue))
+        self.delta = try? container.decode(Double.self, forKey: .delta)
+        self.trend = try? container.decode(String.self, forKey: .trend)
+        self.status = try? container.decode(String.self, forKey: .status)
+    }
+
+    init(label: String, value: Double?, unit: String?, emoji: String?, insight: String?, previous: Double?, delta: Double?, trend: String?, status: String?) {
+        self.label = label; self.value = value; self.unit = unit; self.emoji = emoji
+        self.insight = insight; self.previous = previous; self.delta = delta; self.trend = trend; self.status = status
+    }
 
     var trendArrow: String {
         switch trend {
@@ -88,12 +117,29 @@ struct CriticalAlert: Codable, Identifiable {
     }
 }
 
-struct OverdueScreening: Codable, Identifiable {
+struct OverdueScreening: Decodable, Identifiable {
     var id: String { name }
     let name: String
     let lastDate: String?
     let dueDate: String?
     let status: String?
+    let notes: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, lastDate, dueDate, status, notes
+        case screeningType = "screening_type"
+        case lastDone = "last_done"
+        case nextDue = "next_due"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = (try? container.decode(String.self, forKey: .name)) ?? (try? container.decode(String.self, forKey: .screeningType)) ?? "Unknown"
+        self.lastDate = (try? container.decode(String.self, forKey: .lastDate)) ?? (try? container.decode(String.self, forKey: .lastDone))
+        self.dueDate = (try? container.decode(String.self, forKey: .dueDate)) ?? (try? container.decode(String.self, forKey: .nextDue))
+        self.status = try? container.decode(String.self, forKey: .status)
+        self.notes = try? container.decode(String.self, forKey: .notes)
+    }
 }
 
 // MARK: - Lab Stats Response
@@ -167,46 +213,94 @@ struct LabDataPoint: Codable, Identifiable {
 
 // MARK: - Current State Response
 
-struct CurrentStateResponse: Codable {
-    let labs: [String: AnyCodableValue]?
-    let vitals: [String: AnyCodableValue]?
-    let bp: [String: AnyCodableValue]?
+struct CurrentStateResponse: Decodable {
+    let report: AnyCodableValue?
+    let vitalsSummary: [String: AnyCodableValue]?
+    let bpSummary: [String: AnyCodableValue]?
+    let labResults: [String: AnyCodableValue]?
     let dxa: [String: AnyCodableValue]?
     let screenings: [ScreeningItem]?
-    let meds: [MedicationItem]?
+    let medications: [MedicationItem]?
     let supplements: [SupplementItem]?
     let recommendations: [RecommendationItem]?
-    let healthMetrics: [String: HealthMetricItem]?
-    let sectionConfig: [String: AnyCodableValue]?
+    let healthMetrics: [AnyCodableValue]?
+    let sectionConfig: [AnyCodableValue]?
+
+    // Backward compat accessors
+    var labs: [String: AnyCodableValue]? { labResults }
+    var vitals: [String: AnyCodableValue]? { vitalsSummary }
+    var bp: [String: AnyCodableValue]? { bpSummary }
+    var meds: [MedicationItem]? { medications }
 }
 
-struct ScreeningItem: Codable, Identifiable {
+struct ScreeningItem: Decodable, Identifiable {
     var id: String { name }
     let name: String
     let lastDate: String?
     let nextDue: String?
     let status: String?
     let notes: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, status, notes
+        case screeningType = "screening_type"
+        case lastDone = "last_done"
+        case nextDue = "next_due"
+        case lastDate, nextDueAlt = "nextDue"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = (try? container.decode(String.self, forKey: .name)) ?? (try? container.decode(String.self, forKey: .screeningType)) ?? "Unknown"
+        self.lastDate = (try? container.decode(String.self, forKey: .lastDate)) ?? (try? container.decode(String.self, forKey: .lastDone))
+        self.nextDue = (try? container.decode(String.self, forKey: .nextDueAlt)) ?? (try? container.decode(String.self, forKey: .nextDue))
+        self.status = try? container.decode(String.self, forKey: .status)
+        self.notes = try? container.decode(String.self, forKey: .notes)
+    }
 }
 
-struct MedicationItem: Codable, Identifiable {
+struct MedicationItem: Decodable, Identifiable {
     var id: String { name }
     let name: String
     let dose: String?
     let frequency: String?
     let purpose: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, dose, frequency, purpose, dosage, reason
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = (try? container.decode(String.self, forKey: .name)) ?? "Unknown"
+        self.dose = (try? container.decode(String.self, forKey: .dose)) ?? (try? container.decode(String.self, forKey: .dosage))
+        self.frequency = try? container.decode(String.self, forKey: .frequency)
+        self.purpose = (try? container.decode(String.self, forKey: .purpose)) ?? (try? container.decode(String.self, forKey: .reason))
+    }
 }
 
-struct SupplementItem: Codable, Identifiable {
+struct SupplementItem: Decodable, Identifiable {
     var id: String { name }
     let name: String
     let dose: String?
     let frequency: String?
     let reason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, dose, frequency, reason, dosage, benefit
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = (try? container.decode(String.self, forKey: .name)) ?? "Unknown"
+        self.dose = (try? container.decode(String.self, forKey: .dose)) ?? (try? container.decode(String.self, forKey: .dosage))
+        self.frequency = try? container.decode(String.self, forKey: .frequency)
+        self.reason = (try? container.decode(String.self, forKey: .reason)) ?? (try? container.decode(String.self, forKey: .benefit))
+    }
 }
 
-struct RecommendationItem: Codable, Identifiable {
-    var id: String { title }
+struct RecommendationItem: Decodable, Identifiable {
+    let id: String
     let title: String
     let body: String?
     let priority: String?
@@ -215,9 +309,20 @@ struct RecommendationItem: Codable, Identifiable {
     let contactInfo: String?
 
     enum CodingKeys: String, CodingKey {
-        case title, body, priority, category
-        case actionURL = "actionUrl"
-        case contactInfo
+        case id, title, body, priority, category, actionURL, contactInfo
+        case text, timeframe, who
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = (try? container.decode(String.self, forKey: .id)) ?? UUID().uuidString
+        // API uses "text" not "title"
+        self.title = (try? container.decode(String.self, forKey: .title)) ?? (try? container.decode(String.self, forKey: .text)) ?? "Recommendation"
+        self.body = (try? container.decode(String.self, forKey: .body)) ?? (try? container.decode(String.self, forKey: .who))
+        self.priority = try? container.decode(String.self, forKey: .priority)
+        self.category = (try? container.decode(String.self, forKey: .category)) ?? (try? container.decode(String.self, forKey: .timeframe))
+        self.actionURL = try? container.decode(String.self, forKey: .actionURL)
+        self.contactInfo = try? container.decode(String.self, forKey: .contactInfo)
     }
 }
 
