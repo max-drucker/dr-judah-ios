@@ -1,12 +1,12 @@
 import SwiftUI
 
 struct DNAView: View {
-    @StateObject private var api = APIManager.shared
+    @EnvironmentObject var apiManager: APIManager
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                if api.isLoadingState {
+                if apiManager.isLoadingState {
                     ProgressView("Loading DNA data…")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else {
@@ -25,7 +25,7 @@ struct DNAView: View {
                     .padding(.vertical, 20)
 
                     // Show DNA-relevant recommendations
-                    let dnaRecs = (api.currentState?.recommendations ?? []).filter {
+                    let dnaRecs = (apiManager.currentState?.recommendations ?? []).filter {
                         let t = $0.title.lowercased()
                         return t.contains("dna") || t.contains("gene") || t.contains("genetic") || t.contains("mthfr") || t.contains("supplement")
                     }
@@ -68,8 +68,8 @@ struct DNAView: View {
         }
         .navigationTitle("DNA & Genetics")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await api.fetchCurrentState() }
-        .refreshable { await api.fetchCurrentState(force: true) }
+        .task { await apiManager.fetchCurrentState() }
+        .refreshable { await apiManager.fetchCurrentState(force: true) }
     }
 
     private func geneticCard(_ finding: GeneticFinding) -> some View {

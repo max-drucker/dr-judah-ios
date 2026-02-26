@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct SleepView: View {
-    @StateObject private var api = APIManager.shared
+    @EnvironmentObject var apiManager: APIManager
 
     private var sleepVitals: [(String, String)] {
-        guard let vitals = api.currentState?.vitals else { return [] }
+        guard let vitals = apiManager.currentState?.vitals else { return [] }
         return vitals.compactMap { key, val in
             guard key.lowercased().contains("sleep") else { return nil }
             let display = val.stringValue ?? val.doubleValue.map { String(format: "%.1f", $0) } ?? "–"
@@ -15,7 +15,7 @@ struct SleepView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                if api.isLoadingState {
+                if apiManager.isLoadingState {
                     ProgressView("Loading sleep data…")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if sleepVitals.isEmpty {
@@ -60,8 +60,8 @@ struct SleepView: View {
         }
         .navigationTitle("Sleep Analysis")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await api.fetchCurrentState() }
-        .refreshable { await api.fetchCurrentState(force: true) }
+        .task { await apiManager.fetchCurrentState() }
+        .refreshable { await apiManager.fetchCurrentState(force: true) }
     }
 
     private func formatKey(_ key: String) -> String {

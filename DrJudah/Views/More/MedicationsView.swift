@@ -1,15 +1,15 @@
 import SwiftUI
 
 struct MedicationsView: View {
-    @StateObject private var api = APIManager.shared
+    @EnvironmentObject var apiManager: APIManager
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                if api.isLoadingState {
+                if apiManager.isLoadingState {
                     ProgressView("Loading medications…")
                         .frame(maxWidth: .infinity, minHeight: 200)
-                } else if let meds = api.currentState?.meds, !meds.isEmpty {
+                } else if let meds = apiManager.currentState?.meds, !meds.isEmpty {
                     ForEach(meds) { med in
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: "cross.vial.fill")
@@ -51,7 +51,7 @@ struct MedicationsView: View {
         }
         .navigationTitle("Medications")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await api.fetchCurrentState() }
-        .refreshable { await api.fetchCurrentState(force: true) }
+        .task { await apiManager.fetchCurrentState() }
+        .refreshable { await apiManager.fetchCurrentState(force: true) }
     }
 }

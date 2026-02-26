@@ -1,15 +1,15 @@
 import SwiftUI
 
 struct SupplementsView: View {
-    @StateObject private var api = APIManager.shared
+    @EnvironmentObject var apiManager: APIManager
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                if api.isLoadingState {
+                if apiManager.isLoadingState {
                     ProgressView("Loading supplements…")
                         .frame(maxWidth: .infinity, minHeight: 200)
-                } else if let supplements = api.currentState?.supplements, !supplements.isEmpty {
+                } else if let supplements = apiManager.currentState?.supplements, !supplements.isEmpty {
                     ForEach(supplements) { supp in
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: "pill.fill")
@@ -51,7 +51,7 @@ struct SupplementsView: View {
         }
         .navigationTitle("Supplements")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await api.fetchCurrentState() }
-        .refreshable { await api.fetchCurrentState(force: true) }
+        .task { await apiManager.fetchCurrentState() }
+        .refreshable { await apiManager.fetchCurrentState(force: true) }
     }
 }

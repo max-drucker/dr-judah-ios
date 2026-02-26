@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct ImagingView: View {
-    @StateObject private var api = APIManager.shared
+    @EnvironmentObject var apiManager: APIManager
 
     private var imagingData: [(String, String)] {
-        guard let state = api.currentState else { return [] }
+        guard let state = apiManager.currentState else { return [] }
         var items: [(String, String)] = []
 
         // Extract DXA data
@@ -21,14 +21,14 @@ struct ImagingView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                if api.isLoadingState {
+                if apiManager.isLoadingState {
                     ProgressView("Loading imaging data…")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if imagingData.isEmpty {
                     ContentUnavailableView("No Imaging Data", systemImage: "photo.stack", description: Text("DXA scans, MRIs, and other imaging will appear here."))
                 } else {
                     // DXA Section
-                    if api.currentState?.dxa != nil {
+                    if apiManager.currentState?.dxa != nil {
                         sectionHeader("DXA Body Composition")
                     }
 
@@ -52,8 +52,8 @@ struct ImagingView: View {
         }
         .navigationTitle("Imaging & Scans")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await api.fetchCurrentState() }
-        .refreshable { await api.fetchCurrentState(force: true) }
+        .task { await apiManager.fetchCurrentState() }
+        .refreshable { await apiManager.fetchCurrentState(force: true) }
     }
 
     private func sectionHeader(_ title: String) -> some View {

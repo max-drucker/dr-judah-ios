@@ -2,7 +2,7 @@ import SwiftUI
 import Charts
 
 struct LabsView: View {
-    @StateObject private var api = APIManager.shared
+    @EnvironmentObject var apiManager: APIManager
     @State private var searchText = ""
     @State private var selectedBiomarker: String?
 
@@ -13,7 +13,7 @@ struct LabsView: View {
     ]
 
     private var filteredStats: [(String, [LabDataPoint])] {
-        let stats = api.labStats
+        let stats = apiManager.labStats
         let filtered: [(String, [LabDataPoint])]
         if searchText.isEmpty {
             filtered = stats.sorted { $0.key < $1.key }
@@ -26,7 +26,7 @@ struct LabsView: View {
 
     private var keyBiomarkerData: [(String, [LabDataPoint])] {
         keyBiomarkers.compactMap { name in
-            if let data = api.labStats[name], !data.isEmpty {
+            if let data = apiManager.labStats[name], !data.isEmpty {
                 return (name, data)
             }
             return nil
@@ -36,10 +36,10 @@ struct LabsView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
-                if api.isLoadingLabs {
+                if apiManager.isLoadingLabs {
                     ProgressView("Loading labs…")
                         .frame(maxWidth: .infinity, minHeight: 200)
-                } else if api.labStats.isEmpty {
+                } else if apiManager.labStats.isEmpty {
                     ContentUnavailableView("No Lab Data", systemImage: "flask.fill", description: Text("Lab results will appear here once synced."))
                 } else {
                     // Key biomarkers grid
@@ -83,16 +83,16 @@ struct LabsView: View {
         .navigationTitle("Labs & Bloodwork")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await api.fetchLabStats()
+            await apiManager.fetchLabStats()
         }
         .refreshable {
-            await api.fetchLabStats(force: true)
+            await apiManager.fetchLabStats(force: true)
         }
         .sheet(item: Binding(
             get: { selectedBiomarker.map { SelectedBiomarker(name: $0) } },
             set: { selectedBiomarker = $0?.name }
         )) { selected in
-            BiomarkerDetailSheet(name: selected.name, data: api.labStats[selected.name] ?? [])
+            BiomarkerDetailSheet(name: selected.name, data: apiManager.labStats[selected.name] ?? [])
         }
     }
 }

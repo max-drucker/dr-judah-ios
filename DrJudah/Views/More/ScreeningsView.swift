@@ -1,15 +1,15 @@
 import SwiftUI
 
 struct ScreeningsView: View {
-    @StateObject private var api = APIManager.shared
+    @EnvironmentObject var apiManager: APIManager
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                if api.isLoadingState {
+                if apiManager.isLoadingState {
                     ProgressView("Loading screenings…")
                         .frame(maxWidth: .infinity, minHeight: 200)
-                } else if let screenings = api.currentState?.screenings, !screenings.isEmpty {
+                } else if let screenings = apiManager.currentState?.screenings, !screenings.isEmpty {
                     ForEach(screenings) { screening in
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: statusIcon(screening.status))
@@ -58,8 +58,8 @@ struct ScreeningsView: View {
         }
         .navigationTitle("Screening Schedule")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await api.fetchCurrentState() }
-        .refreshable { await api.fetchCurrentState(force: true) }
+        .task { await apiManager.fetchCurrentState() }
+        .refreshable { await apiManager.fetchCurrentState(force: true) }
     }
 
     private func statusIcon(_ status: String?) -> String {

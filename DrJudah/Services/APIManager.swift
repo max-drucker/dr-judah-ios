@@ -115,6 +115,7 @@ class APIManager: ObservableObject {
             let response = try JSONDecoder().decode(CurrentStateResponse.self, from: data)
             currentState = response
             stateCacheTime = Date()
+            print("Current state loaded: \(response.screenings?.count ?? 0) screenings, \(response.medications?.count ?? 0) meds, \(response.supplements?.count ?? 0) supplements")
         } catch {
             stateError = error.localizedDescription
             print("Current state error: \(error)")

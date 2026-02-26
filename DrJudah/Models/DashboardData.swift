@@ -8,6 +8,19 @@ struct DashboardSignalsResponse: Decodable {
     let calcChart: [ChartDataPoint]?
     let criticalAlerts: [CriticalAlert]?
     let overdueScreenings: [OverdueScreening]?
+
+    enum CodingKeys: String, CodingKey {
+        case signals, vatChart, calcChart, criticalAlerts, overdueScreenings
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.signals = try? container.decode([String: Signal].self, forKey: .signals)
+        self.vatChart = try? container.decode([ChartDataPoint].self, forKey: .vatChart)
+        self.calcChart = try? container.decode([ChartDataPoint].self, forKey: .calcChart)
+        self.criticalAlerts = try? container.decode([CriticalAlert].self, forKey: .criticalAlerts)
+        self.overdueScreenings = try? container.decode([OverdueScreening].self, forKey: .overdueScreenings)
+    }
 }
 
 struct Signal: Decodable, Identifiable {
@@ -264,6 +277,27 @@ struct CurrentStateResponse: Decodable {
     var vitals: [String: AnyCodableValue]? { vitalsSummary }
     var bp: [String: AnyCodableValue]? { bpSummary }
     var meds: [MedicationItem]? { medications }
+
+    enum CodingKeys: String, CodingKey {
+        case report, vitalsSummary, bpSummary, labResults, dxa
+        case screenings, medications, supplements, recommendations
+        case healthMetrics, sectionConfig
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.report = try? container.decode(AnyCodableValue.self, forKey: .report)
+        self.vitalsSummary = try? container.decode([String: AnyCodableValue].self, forKey: .vitalsSummary)
+        self.bpSummary = try? container.decode([String: AnyCodableValue].self, forKey: .bpSummary)
+        self.labResults = try? container.decode([String: AnyCodableValue].self, forKey: .labResults)
+        self.dxa = try? container.decode([String: AnyCodableValue].self, forKey: .dxa)
+        self.screenings = try? container.decode([ScreeningItem].self, forKey: .screenings)
+        self.medications = try? container.decode([MedicationItem].self, forKey: .medications)
+        self.supplements = try? container.decode([SupplementItem].self, forKey: .supplements)
+        self.recommendations = try? container.decode([RecommendationItem].self, forKey: .recommendations)
+        self.healthMetrics = try? container.decode([AnyCodableValue].self, forKey: .healthMetrics)
+        self.sectionConfig = try? container.decode([AnyCodableValue].self, forKey: .sectionConfig)
+    }
 }
 
 struct ScreeningItem: Decodable, Identifiable {
