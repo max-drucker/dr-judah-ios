@@ -86,6 +86,13 @@ struct AskJudahView: View {
                     }
                 }
 
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        inputFocused = false
+                    }
+                }
+
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         startNewConversation()

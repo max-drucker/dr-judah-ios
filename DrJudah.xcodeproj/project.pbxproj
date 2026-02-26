@@ -14,11 +14,13 @@
 		20D83AABB9F83585D48C859D /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 345E7093D575BCEE8152BD84 /* LoginView.swift */; };
 		236A8355E9071FD7E76F451C /* GradientHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 533FEEB8D234F656E311ED9B /* GradientHeader.swift */; };
 		243826AE0ED7EFC64BB7106A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4BFD9BE44C3C5A6D1BAEB327 /* Assets.xcassets */; };
+		286E47E59EE5B1ABCBC129FE /* MedicationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F254DB59BB6FE4ADC889314 /* MedicationsView.swift */; };
 		366B900F2D4BE66CA4002B56 /* HealthStatusTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57FBCC90FAD1DFAE12CCDC6F /* HealthStatusTile.swift */; };
 		37B15AFA2D61A60CC8288A8D /* Color+DrJudah.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5418974094A02ECFF191EA4A /* Color+DrJudah.swift */; };
 		3AEEA87114BEFF13037B8D7C /* DataTypeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF3BF9866CF0A4297D423D0 /* DataTypeRow.swift */; };
 		4018F15162BC4EA38530F8A0 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 890978350803D2152B07784B /* ChatMessage.swift */; };
 		435FB9A8C4E7F60A71F5EE3B /* OmronCSVImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F6533F487C69A97C66C0C27 /* OmronCSVImporter.swift */; };
+		462247649663D20AA49B070A /* SleepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0EC47E9ACD1FC65DBD1A234 /* SleepView.swift */; };
 		48C72DC55F57C0D0D7D29DAF /* AskJudahView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79527D6B7BAED30C4790CDED /* AskJudahView.swift */; };
 		510847221A66A9B7068886B8 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 6B663E1024DA8E0A957E8C1E /* Supabase */; };
 		5320DE80951B6F6A1EEBF7AF /* SupabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 262B142EA1781E17A2CDD243 /* SupabaseManager.swift */; };
@@ -26,12 +28,15 @@
 		6BF6963756C64B977545350F /* VitalCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D3B6DA1BF5EE467682B1135 /* VitalCard.swift */; };
 		6F12F409C4A53372ADA8CDA7 /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1EC5F52B4A58B201C39443 /* MessageBubble.swift */; };
 		724D842CBC1858CB98A4AAA7 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72EE7FD792D2FDA8A33A32E /* HomeView.swift */; };
+		731C4ADB91494BC77B8E7033 /* SupplementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 832D462A8D74778274B8447E /* SupplementsView.swift */; };
 		76E1175ADB0D1CADE9EC391D /* TrendChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD40F4EA97C12CE0002DC28C /* TrendChartView.swift */; };
 		77E4D15904E8AF372EB60FF0 /* SyncView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CAAFF0F8E8EEF66EFCD2778 /* SyncView.swift */; };
 		79EB782CABD74B9B5886D48A /* HealthScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F14BB840538CC2BFBE194A6 /* HealthScoreView.swift */; };
 		812CC299CB2AF28E47F842E1 /* WorkoutCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AD2CE5670386D097B20B0EE /* WorkoutCard.swift */; };
 		83CE0EF5C324E658A3692CD0 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F167B5BAFEA59F089440A4 /* AuthManager.swift */; };
 		A8D416D700B97372B9A81854 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C418F8CFA1F7921D431609 /* DashboardView.swift */; };
+		AC124C8F8FF77C2DD10C9E62 /* LabsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E147B78EE17742D0EE2646 /* LabsView.swift */; };
+		AE8F4178A9CB75D5B30989F7 /* ScreeningsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93BC4A10AFCC0C43824744E9 /* ScreeningsView.swift */; };
 		B525BF4977F9C9853D55969F /* DrJudahApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C891AC44740279E7AADE8CF8 /* DrJudahApp.swift */; };
 		B8A1CE9C47DCC528F49908B8 /* InsightCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21B87BF8CE2E806483202065 /* InsightCard.swift */; };
 		BC966B8D1DFAA9B41230D997 /* Date+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED9E638D951B1F552EEE54FF /* Date+Formatting.swift */; };
@@ -43,8 +48,10 @@
 		D411E26DF998955D96A0D698 /* MoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E808964D6C508C0291802D0 /* MoreView.swift */; };
 		D42C385324593BB0731F80B3 /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3132BC6BC51AAF244E2DA619 /* InsightsView.swift */; };
 		DF77254EF8B1DB6083FF1E0D /* APIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66271FCE601AE56A37855F14 /* APIManager.swift */; };
+		E7EB4F10A95A2D425D8FB0F8 /* ImagingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D3E4EA296DCA5A7D950EA0D /* ImagingView.swift */; };
 		EC681B83C85BE00F7C503DFB /* RecommendationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 054FE5FF8F2BED6D0845E83B /* RecommendationCard.swift */; };
 		F1A638108BF9E1DF044F47E2 /* DashboardData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C900D1DA534CC8153CE2E30 /* DashboardData.swift */; };
+		F2DA4C8F9E915BE25138A037 /* DNAView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 959A4801884E5B1EFDA4CB47 /* DNAView.swift */; };
 		F38FBC8A86332D4B6FBB987D /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BE177E954201192C0140EBA /* LoadingView.swift */; };
 		FE253F8F7668B097A5B31F3D /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F63EF8AC9D2C0D6620EDCF /* HealthKitManager.swift */; };
 /* End PBXBuildFile section */
@@ -59,6 +66,7 @@
 		21F167B5BAFEA59F089440A4 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		262B142EA1781E17A2CDD243 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseManager.swift; sourceTree = "<group>"; };
 		2907338CD14E74A6B746DCE5 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		2F254DB59BB6FE4ADC889314 /* MedicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MedicationsView.swift; path = DrJudah/Views/More/MedicationsView.swift; sourceTree = SOURCE_ROOT; };
 		30533B86C20A07D046491DE8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		30F352CC913B783D07744F22 /* VitalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitalsView.swift; sourceTree = "<group>"; };
 		3132BC6BC51AAF244E2DA619 /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
@@ -78,19 +86,25 @@
 		5F6533F487C69A97C66C0C27 /* OmronCSVImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OmronCSVImporter.swift; sourceTree = "<group>"; };
 		66271FCE601AE56A37855F14 /* APIManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIManager.swift; sourceTree = "<group>"; };
 		697F1AD3BD569680533770D0 /* BackgroundSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSyncManager.swift; sourceTree = "<group>"; };
+		6D3E4EA296DCA5A7D950EA0D /* ImagingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ImagingView.swift; path = DrJudah/Views/More/ImagingView.swift; sourceTree = SOURCE_ROOT; };
 		77D71084E4E169E2A423D124 /* DrJudah.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DrJudah.entitlements; sourceTree = "<group>"; };
 		79527D6B7BAED30C4790CDED /* AskJudahView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskJudahView.swift; sourceTree = "<group>"; };
 		81141BABC543D8B9F2BEC228 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		832D462A8D74778274B8447E /* SupplementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupplementsView.swift; path = DrJudah/Views/More/SupplementsView.swift; sourceTree = SOURCE_ROOT; };
 		890978350803D2152B07784B /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		8D3B6DA1BF5EE467682B1135 /* VitalCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitalCard.swift; sourceTree = "<group>"; };
+		93BC4A10AFCC0C43824744E9 /* ScreeningsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScreeningsView.swift; path = DrJudah/Views/More/ScreeningsView.swift; sourceTree = SOURCE_ROOT; };
+		959A4801884E5B1EFDA4CB47 /* DNAView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DNAView.swift; path = DrJudah/Views/More/DNAView.swift; sourceTree = SOURCE_ROOT; };
 		9EACDAC597514396D73D9240 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AA1EC5F52B4A58B201C39443 /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
+		B2E147B78EE17742D0EE2646 /* LabsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LabsView.swift; path = DrJudah/Views/More/LabsView.swift; sourceTree = SOURCE_ROOT; };
 		B72EE7FD792D2FDA8A33A32E /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		C155E28F7E0DEA65B505181C /* SignalCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalCard.swift; sourceTree = "<group>"; };
 		C891AC44740279E7AADE8CF8 /* DrJudahApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrJudahApp.swift; sourceTree = "<group>"; };
 		CD40F4EA97C12CE0002DC28C /* TrendChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendChartView.swift; sourceTree = "<group>"; };
 		E6407520D8FE806DF58FD01E /* WebViewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewSheet.swift; sourceTree = "<group>"; };
 		ED9E638D951B1F552EEE54FF /* Date+Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Formatting.swift"; sourceTree = "<group>"; };
+		F0EC47E9ACD1FC65DBD1A234 /* SleepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SleepView.swift; path = DrJudah/Views/More/SleepView.swift; sourceTree = SOURCE_ROOT; };
 		FA235ED02F26D27F7C89B125 /* HealthData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthData.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -179,6 +193,13 @@
 			children = (
 				F2B24BC92B33E0360AA64907 /* DrJudah */,
 				59A0C4B068EDEC65844468E1 /* Products */,
+				B2E147B78EE17742D0EE2646 /* LabsView.swift */,
+				F0EC47E9ACD1FC65DBD1A234 /* SleepView.swift */,
+				6D3E4EA296DCA5A7D950EA0D /* ImagingView.swift */,
+				959A4801884E5B1EFDA4CB47 /* DNAView.swift */,
+				832D462A8D74778274B8447E /* SupplementsView.swift */,
+				2F254DB59BB6FE4ADC889314 /* MedicationsView.swift */,
+				93BC4A10AFCC0C43824744E9 /* ScreeningsView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -379,6 +400,13 @@
 				0B4B83B0643EFBEDBAFD1664 /* VitalsView.swift in Sources */,
 				C690F1172A93FE409B191CA9 /* WebViewSheet.swift in Sources */,
 				812CC299CB2AF28E47F842E1 /* WorkoutCard.swift in Sources */,
+				AC124C8F8FF77C2DD10C9E62 /* LabsView.swift in Sources */,
+				462247649663D20AA49B070A /* SleepView.swift in Sources */,
+				E7EB4F10A95A2D425D8FB0F8 /* ImagingView.swift in Sources */,
+				F2DA4C8F9E915BE25138A037 /* DNAView.swift in Sources */,
+				731C4ADB91494BC77B8E7033 /* SupplementsView.swift in Sources */,
+				286E47E59EE5B1ABCBC129FE /* MedicationsView.swift in Sources */,
+				AE8F4178A9CB75D5B30989F7 /* ScreeningsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

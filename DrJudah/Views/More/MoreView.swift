@@ -84,13 +84,13 @@ struct MoreView: View {
 
                 // Quick Links to Web App
                 Section("Health Data") {
-                    webLink(icon: "flask.fill", title: "Labs & Bloodwork", color: .blue, path: "/labs")
-                    webLink(icon: "bed.double.fill", title: "Sleep Analysis", color: .indigo, path: "/sleep")
-                    webLink(icon: "photo.stack", title: "Imaging & Scans", color: .purple, path: "/imaging")
-                    webLink(icon: "dna", title: "DNA & Genetics", color: .green, path: "/dna")
-                    webLink(icon: "pill.fill", title: "Supplements", color: .orange, path: "/supplements")
-                    webLink(icon: "cross.vial.fill", title: "Medications", color: .red, path: "/medications")
-                    webLink(icon: "calendar.badge.clock", title: "Screening Schedule", color: .teal, path: "/screenings")
+                    nativeLink(icon: "flask.fill", title: "Labs & Bloodwork", color: .blue) { LabsView() }
+                    nativeLink(icon: "bed.double.fill", title: "Sleep Analysis", color: .indigo) { SleepView() }
+                    nativeLink(icon: "photo.stack", title: "Imaging & Scans", color: .purple) { ImagingView() }
+                    nativeLink(icon: "dna", title: "DNA & Genetics", color: .green) { DNAView() }
+                    nativeLink(icon: "pill.fill", title: "Supplements", color: .orange) { SupplementsView() }
+                    nativeLink(icon: "cross.vial.fill", title: "Medications", color: .red) { MedicationsView() }
+                    nativeLink(icon: "calendar.badge.clock", title: "Screening Schedule", color: .teal) { ScreeningsView() }
                 }
 
                 // Omron CSV Import
@@ -181,6 +181,24 @@ struct MoreView: View {
                 allowsMultipleSelection: false
             ) { result in
                 handleOmronImport(result: result)
+            }
+        }
+    }
+
+    // MARK: - Native Link Row
+
+    private func nativeLink<Destination: View>(icon: String, title: String, color: Color, @ViewBuilder destination: @escaping () -> Destination) -> some View {
+        NavigationLink {
+            destination()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.body)
+                    .foregroundStyle(color)
+                    .frame(width: 28)
+
+                Text(title)
+                    .foregroundStyle(.primary)
             }
         }
     }
