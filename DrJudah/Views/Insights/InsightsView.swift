@@ -80,16 +80,27 @@ struct InsightsView: View {
             }
 
             ForEach(apiManager.criticalAlerts) { alert in
-                HStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
+                let color: Color = {
+                    switch alert.severity?.lowercased() {
+                    case "critical": return .red
+                    case "warning": return .orange
+                    default: return .yellow
+                    }
+                }()
 
-                    VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: alert.severity?.lowercased() == "critical" ? "exclamationmark.triangle.fill" : "exclamationmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(color)
+                        .padding(.top, 2)
+
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(alert.title)
                             .font(.subheadline.bold())
                         Text(alert.message)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     Spacer()
@@ -97,7 +108,11 @@ struct InsightsView: View {
                 .padding(14)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.red.opacity(0.08))
+                        .fill(color.opacity(0.08))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(color.opacity(0.2), lineWidth: 0.5)
                 )
             }
         }

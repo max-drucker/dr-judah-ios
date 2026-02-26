@@ -114,10 +114,31 @@ struct CriticalAlert: Decodable, Identifiable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.title = (try? container.decode(String.self, forKey: .title)) ?? (try? container.decode(String.self, forKey: .type)) ?? "Alert"
+        let rawTitle = (try? container.decode(String.self, forKey: .title)) ?? (try? container.decode(String.self, forKey: .type)) ?? "Alert"
+        // Convert snake_case type identifiers to readable titles
+        self.title = CriticalAlert.formatTitle(rawTitle)
         self.message = (try? container.decode(String.self, forKey: .message)) ?? ""
         self.severity = try? container.decode(String.self, forKey: .severity)
         self.category = try? container.decode(String.self, forKey: .category)
+    }
+
+    private static func formatTitle(_ raw: String) -> String {
+        // If it contains spaces already, it's a real title
+        if raw.contains(" ") { return raw }
+        // Convert snake_case to Title Case
+        return raw
+            .replacingOccurrences(of: "_", with: " ")
+            .split(separator: " ")
+            .map { word in
+                let lower = word.lowercased()
+                // Keep common abbreviations uppercase
+                let abbrevs = ["hr", "hrv", "bp", "ldl", "hdl", "bmi", "trt", "alm", "dxa", "crp"]
+                if abbrevs.contains(lower) {
+                    return lower.uppercased()
+                }
+                return word.prefix(1).uppercased() + word.dropFirst().lowercased()
+            }
+            .joined(separator: " ")
     }
 
     var severityColor: String {
