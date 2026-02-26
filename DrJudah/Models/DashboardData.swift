@@ -101,12 +101,24 @@ struct ChartDataPoint: Codable, Identifiable {
     }
 }
 
-struct CriticalAlert: Codable, Identifiable {
+struct CriticalAlert: Decodable, Identifiable {
     var id: String { title }
     let title: String
     let message: String
     let severity: String?
     let category: String?
+
+    enum CodingKeys: String, CodingKey {
+        case title, message, severity, category, type
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.title = (try? container.decode(String.self, forKey: .title)) ?? (try? container.decode(String.self, forKey: .type)) ?? "Alert"
+        self.message = (try? container.decode(String.self, forKey: .message)) ?? ""
+        self.severity = try? container.decode(String.self, forKey: .severity)
+        self.category = try? container.decode(String.self, forKey: .category)
+    }
 
     var severityColor: String {
         switch severity?.lowercased() {
