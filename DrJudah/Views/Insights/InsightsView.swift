@@ -80,40 +80,7 @@ struct InsightsView: View {
             }
 
             ForEach(apiManager.criticalAlerts) { alert in
-                let color: Color = {
-                    switch alert.severity?.lowercased() {
-                    case "critical": return .red
-                    case "warning": return .orange
-                    default: return .yellow
-                    }
-                }()
-
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: alert.severity?.lowercased() == "critical" ? "exclamationmark.triangle.fill" : "exclamationmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(color)
-                        .padding(.top, 2)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(alert.title)
-                            .font(.subheadline.bold())
-                        Text(alert.message)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    Spacer()
-                }
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(color.opacity(0.08))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(color.opacity(0.2), lineWidth: 0.5)
-                )
+                AlertInsightCard(alert: alert)
             }
         }
     }
@@ -209,5 +176,98 @@ struct InsightsView: View {
                 )
             }
         }
+    }
+}
+
+// MARK: - Alert Insight Card
+
+struct AlertInsightCard: View {
+    let alert: CriticalAlert
+    @State private var isExpanded = false
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var severityColor: Color {
+        switch alert.severity?.lowercased() {
+        case "critical", "high": return .red
+        case "warning", "medium": return .orange
+        default: return .yellow
+        }
+    }
+
+    private var emoji: String {
+        switch alert.severity?.lowercased() {
+        case "critical", "high": return "🚨"
+        case "warning", "medium": return "⚠️"
+        default: return "💡"
+        }
+    }
+
+    private var cardBackground: some ShapeStyle {
+        if colorScheme == .dark {
+            return AnyShapeStyle(Color(.secondarySystemGroupedBackground))
+        } else {
+            switch alert.severity?.lowercased() {
+            case "critical", "high": return AnyShapeStyle(LinearGradient(colors: [Color(hex: "FEF2F2"), Color(hex: "FEE2E2")], startPoint: .topLeading, endPoint: .bottomTrailing))
+            case "warning", "medium": return AnyShapeStyle(LinearGradient(colors: [Color(hex: "FFFBEB"), Color(hex: "FEF3C7")], startPoint: .topLeading, endPoint: .bottomTrailing))
+            default: return AnyShapeStyle(LinearGradient(colors: [Color(hex: "F0FDF4"), Color(hex: "DCFCE7")], startPoint: .topLeading, endPoint: .bottomTrailing))
+            }
+        }
+    }
+
+    var body: some View {
+        Button(action: {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                isExpanded.toggle()
+            }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    Text(emoji)
+                        .font(.title3)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(alert.title)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.primary)
+
+                        Text("ACTION")
+                            .font(.caption2.bold())
+                            .foregroundStyle(severityColor)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill(severityColor.opacity(0.15))
+                            )
+                    }
+
+                    Spacer()
+
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption.bold())
+                        .foregroundStyle(.secondary)
+                }
+
+                if isExpanded {
+                    Text(alert.message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(cardBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(severityColor.opacity(colorScheme == .dark ? 0.4 : 0.2), lineWidth: colorScheme == .dark ? 1.5 : 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
