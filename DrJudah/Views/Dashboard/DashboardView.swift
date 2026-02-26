@@ -13,12 +13,6 @@ struct DashboardView: View {
                 VStack(spacing: 20) {
                     headerSection
 
-                    // Critical alerts
-                    if !apiManager.criticalAlerts.isEmpty {
-                        criticalAlertsSection
-                            .padding(.horizontal)
-                    }
-
                     // Health Status Grid
                     healthStatusGrid
                         .padding(.horizontal)
@@ -108,40 +102,6 @@ struct DashboardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .padding(.horizontal)
         .shadow(color: Color(hex: "3B82F6").opacity(0.3), radius: 16, y: 8)
-    }
-
-    // MARK: - Critical Alerts
-
-    private var criticalAlertsSection: some View {
-        VStack(spacing: 8) {
-            ForEach(apiManager.criticalAlerts) { alert in
-                HStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.title3)
-                        .foregroundStyle(alertColor(alert.severityColor))
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(alert.title)
-                            .font(.subheadline.bold())
-                        Text(alert.message)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-
-                    Spacer()
-                }
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(alertColor(alert.severityColor).opacity(0.1))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(alertColor(alert.severityColor).opacity(0.3), lineWidth: 1)
-                )
-            }
-        }
     }
 
     // MARK: - Health Status Grid
