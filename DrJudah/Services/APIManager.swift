@@ -13,6 +13,10 @@ class APIManager: ObservableObject {
     @Published var labStats: [String: [LabDataPoint]] = [:]
 
     @Published var currentState: CurrentStateResponse?
+    @Published var trends: TrendsAPIResponse?
+    @Published var isLoadingTrends = false
+    @Published var trendsError: String?
+    private var trendsCacheTime: Date?
 
     @Published var isLoadingDashboard = false
     @Published var isLoadingLabs = false
@@ -34,7 +38,7 @@ class APIManager: ObservableObject {
     }()
 
     var isLoading: Bool {
-        isLoadingDashboard || isLoadingLabs || isLoadingState
+        isLoadingDashboard || isLoadingLabs || isLoadingState || isLoadingTrends
     }
 
     // MARK: - Fetch All
@@ -43,7 +47,8 @@ class APIManager: ObservableObject {
         async let d: () = fetchDashboardSignals()
         async let l: () = fetchLabStats()
         async let s: () = fetchCurrentState()
-        _ = await (d, l, s)
+        async let t: () = fetchTrends()
+        _ = await (d, l, s, t)
     }
 
     // MARK: - Dashboard Signals
@@ -122,6 +127,28 @@ class APIManager: ObservableObject {
         }
     }
 
+    // MARK: - Trends
+
+    func fetchTrends(period: String = "30d", force: Bool = false) async {
+        if !force, let cacheTime = trendsCacheTime, Date().timeIntervalSince(cacheTime) < cacheTTL {
+            return
+        }
+
+        isLoadingTrends = true
+        trendsError = nil
+        defer { isLoadingTrends = false }
+
+        do {
+            let data = try await request(path: "/api/trends?period=\(period)")
+            let response = try JSONDecoder().decode(TrendsAPIResponse.self, from: data)
+            trends = response
+            trendsCacheTime = Date()
+        } catch {
+            trendsError = error.localizedDescription
+            print("Trends error: \(error)")
+        }
+    }
+
     // MARK: - Network
 
     private func request(path: String) async throws -> Data {
@@ -152,5 +179,6 @@ class APIManager: ObservableObject {
         dashboardCacheTime = nil
         labsCacheTime = nil
         stateCacheTime = nil
+        trendsCacheTime = nil
     }
 }

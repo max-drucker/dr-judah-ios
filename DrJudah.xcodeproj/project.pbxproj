@@ -17,6 +17,7 @@
 		243826AE0ED7EFC64BB7106A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4BFD9BE44C3C5A6D1BAEB327 /* Assets.xcassets */; };
 		27053781C4B1076B6DD91000 /* DNAView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A48BB1A47BA28ECE5DFD42B /* DNAView.swift */; };
 		366B900F2D4BE66CA4002B56 /* HealthStatusTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57FBCC90FAD1DFAE12CCDC6F /* HealthStatusTile.swift */; };
+		366DC56E1AD29EE864B7BDEA /* TrendsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4395244E4CF75D85A4277FD /* TrendsData.swift */; };
 		37B15AFA2D61A60CC8288A8D /* Color+DrJudah.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5418974094A02ECFF191EA4A /* Color+DrJudah.swift */; };
 		3AEEA87114BEFF13037B8D7C /* DataTypeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF3BF9866CF0A4297D423D0 /* DataTypeRow.swift */; };
 		3E3024B7130C4C6FC69B33FE /* SleepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E9A905F5FD962C2FCA22AF /* SleepView.swift */; };
@@ -39,6 +40,7 @@
 		A5F7F734AA294A0A6497E4A5 /* MedicationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CE90490233B62E3BF532EFC /* MedicationsView.swift */; };
 		A8D416D700B97372B9A81854 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C418F8CFA1F7921D431609 /* DashboardView.swift */; };
 		B525BF4977F9C9853D55969F /* DrJudahApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C891AC44740279E7AADE8CF8 /* DrJudahApp.swift */; };
+		B723CB5AB947DB72A9DD3A3F /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0327E387CFF0FF06D029B86 /* TrendsView.swift */; };
 		B8A1CE9C47DCC528F49908B8 /* InsightCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21B87BF8CE2E806483202065 /* InsightCard.swift */; };
 		BC966B8D1DFAA9B41230D997 /* Date+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED9E638D951B1F552EEE54FF /* Date+Formatting.swift */; };
 		C1C0764B8DE549D9974ECBB8 /* ExecutiveSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B89BCF0227FBBB8C55AFE809 /* ExecutiveSummaryView.swift */; };
@@ -100,6 +102,8 @@
 		9EACDAC597514396D73D9240 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A5E9A905F5FD962C2FCA22AF /* SleepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepView.swift; sourceTree = "<group>"; };
 		AA1EC5F52B4A58B201C39443 /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
+		B0327E387CFF0FF06D029B86 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
+		B4395244E4CF75D85A4277FD /* TrendsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsData.swift; sourceTree = "<group>"; };
 		B72EE7FD792D2FDA8A33A32E /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		B89BCF0227FBBB8C55AFE809 /* ExecutiveSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutiveSummaryView.swift; sourceTree = "<group>"; };
 		C155E28F7E0DEA65B505181C /* SignalCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalCard.swift; sourceTree = "<group>"; };
@@ -230,6 +234,7 @@
 				890978350803D2152B07784B /* ChatMessage.swift */,
 				4C900D1DA534CC8153CE2E30 /* DashboardData.swift */,
 				FA235ED02F26D27F7C89B125 /* HealthData.swift */,
+				B4395244E4CF75D85A4277FD /* TrendsData.swift */,
 				409B1B0086998973C961ACA5 /* User.swift */,
 			);
 			path = Models;
@@ -247,6 +252,7 @@
 				0CAC0FDC961D2550C830AD83 /* Insights */,
 				CD62AD2C53407D8EEE31F4D0 /* More */,
 				23F12A488E5A69F1C7023096 /* Sync */,
+				CFF8DF5E375BA9098AA17840 /* Trends */,
 				B45054413D37E647DBA7CCB7 /* Vitals */,
 			);
 			path = Views;
@@ -275,6 +281,14 @@
 				5BE177E954201192C0140EBA /* LoadingView.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		CFF8DF5E375BA9098AA17840 /* Trends */ = {
+			isa = PBXGroup;
+			children = (
+				B0327E387CFF0FF06D029B86 /* TrendsView.swift */,
+			);
+			path = Trends;
 			sourceTree = "<group>";
 		};
 		F2B24BC92B33E0360AA64907 /* DrJudah */ = {
@@ -410,6 +424,8 @@
 				5FC3CD2436A17DBB3B92B0DA /* SupplementsView.swift in Sources */,
 				77E4D15904E8AF372EB60FF0 /* SyncView.swift in Sources */,
 				76E1175ADB0D1CADE9EC391D /* TrendChartView.swift in Sources */,
+				366DC56E1AD29EE864B7BDEA /* TrendsData.swift in Sources */,
+				B723CB5AB947DB72A9DD3A3F /* TrendsView.swift in Sources */,
 				06167CC427F2B25DF70886DD /* User.swift in Sources */,
 				6BF6963756C64B977545350F /* VitalCard.swift in Sources */,
 				0B4B83B0643EFBEDBAFD1664 /* VitalsView.swift in Sources */,

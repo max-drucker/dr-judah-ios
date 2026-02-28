@@ -13,29 +13,35 @@ struct ContentView: View {
                 }
                 .tag(0)
 
+            TrendsView()
+                .tabItem {
+                    Label("Trends", systemImage: "chart.line.uptrend.xyaxis")
+                }
+                .tag(1)
+
             InsightsView()
                 .tabItem {
                     Label("Insights", systemImage: "lightbulb.fill")
                 }
-                .tag(1)
+                .tag(2)
 
             AskJudahView()
                 .tabItem {
                     Label("Ask Judah", systemImage: "sparkles")
                 }
-                .tag(2)
+                .tag(3)
 
             VitalsView()
                 .tabItem {
                     Label("Vitals", systemImage: "waveform.path.ecg")
                 }
-                .tag(3)
+                .tag(4)
 
             MoreView()
                 .tabItem {
                     Label("More", systemImage: "ellipsis.circle.fill")
                 }
-                .tag(4)
+                .tag(5)
         }
         .tint(.drJudahBlue)
         .task {
