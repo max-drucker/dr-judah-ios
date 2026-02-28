@@ -13,6 +13,12 @@ struct DashboardView: View {
                 VStack(spacing: 20) {
                     headerSection
 
+                    // Executive Summary
+                    ExecutiveSummaryView()
+
+                    // Key Insights
+                    KeyInsightsView()
+
                     // Health Status Grid
                     healthStatusGrid
                         .padding(.horizontal)
