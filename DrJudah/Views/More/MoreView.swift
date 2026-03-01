@@ -1,12 +1,7 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct MoreView: View {
     @EnvironmentObject var syncManager: BackgroundSyncManager
-
-    @State private var showOmronImporter = false
-    @State private var omronImportResult: String?
-    @State private var isImporting = false
 
     var body: some View {
         NavigationStack {
@@ -91,57 +86,6 @@ struct MoreView: View {
                     nativeLink(icon: "calendar.badge.clock", title: "Screening Schedule", color: .teal) { ScreeningsView() }
                 }
 
-                // Omron CSV Import
-                Section {
-                    Button {
-                        showOmronImporter = true
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "doc.text.fill")
-                                .font(.title3)
-                                .foregroundStyle(Color(hex: "3B82F6"))
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Import Omron BP Data")
-                                    .font(.subheadline.bold())
-                                Text("Upload a CSV export from Omron Connect")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .disabled(isImporting)
-
-                    if isImporting {
-                        HStack {
-                            ProgressView()
-                            Text("Importing…")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    if let result = omronImportResult {
-                        HStack {
-                            Image(systemName: result.contains("Error") ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                                .foregroundStyle(result.contains("Error") ? .orange : .green)
-                            Text(result)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                } header: {
-                    Text("Blood Pressure Import")
-                } footer: {
-                    Text("Omron Connect → Export → CSV. Import blood pressure readings as a backup to HealthKit sync.")
-                }
-
                 // App Info
                 Section {
                     HStack {
@@ -168,13 +112,6 @@ struct MoreView: View {
                 }
             }
             .navigationTitle("More")
-            .fileImporter(
-                isPresented: $showOmronImporter,
-                allowedContentTypes: [UTType.commaSeparatedText, UTType.plainText],
-                allowsMultipleSelection: false
-            ) { result in
-                handleOmronImport(result: result)
-            }
         }
     }
 
@@ -196,36 +133,4 @@ struct MoreView: View {
         }
     }
 
-    // MARK: - Omron Import
-
-    private func handleOmronImport(result: Result<[URL], Error>) {
-        switch result {
-        case .success(let urls):
-            guard let url = urls.first else { return }
-            isImporting = true
-            omronImportResult = nil
-
-            Task {
-                do {
-                    guard url.startAccessingSecurityScopedResource() else {
-                        omronImportResult = "Error: Could not access file."
-                        isImporting = false
-                        return
-                    }
-                    defer { url.stopAccessingSecurityScopedResource() }
-
-                    let csvString = try String(contentsOf: url, encoding: .utf8)
-                    let readings = try OmronCSVImporter.parse(csvString: csvString)
-                    try await OmronCSVImporter.upload(readings)
-                    omronImportResult = "✓ Imported \(readings.count) blood pressure readings"
-                } catch {
-                    omronImportResult = "Error: \(error.localizedDescription)"
-                }
-                isImporting = false
-            }
-
-        case .failure(let error):
-            omronImportResult = "Error: \(error.localizedDescription)"
-        }
-    }
 }

@@ -23,7 +23,7 @@ struct SleepView: View {
                     efficiencyChart
                 }
 
-                Spacer(minHeight: 40)
+                Spacer(minLength: 40)
             }
             .padding()
         }
