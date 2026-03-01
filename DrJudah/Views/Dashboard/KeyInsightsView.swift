@@ -22,43 +22,36 @@ struct KeyInsightItem: Identifiable {
             rawValue.uppercased()
         }
     }
-
-    static let hardcoded: [KeyInsightItem] = [
-        KeyInsightItem(
-            icon: "🚨",
-            title: "Muscle loss crisis — ALM Index 7.25 (7th percentile)",
-            detail: "Appendicular lean mass is critically low, placing you in clinical sarcopenia territory. Immediate intervention needed: TRT evaluation, progressive resistance training 3-4x/week, and minimum 150g protein daily. Creatine monohydrate 5g/day recommended as well.",
-            priority: .action
-        ),
-        KeyInsightItem(
-            icon: "🚨",
-            title: "RHR 91 bpm + HRV 23ms = sympathetic overdrive",
-            detail: "Your autonomic nervous system is stuck in fight-or-flight. This combination correlates with elevated cardiovascular risk and poor recovery. Needs cardiology evaluation to rule out underlying causes. Consider beta-blocker if lifestyle optimization doesn't improve within 4-6 weeks.",
-            priority: .action
-        ),
-        KeyInsightItem(
-            icon: "💊",
-            title: "Diastolic BP 89 on Ramipril 2.5mg — right drug, wrong dose",
-            detail: "Borderline Stage 1 hypertension despite current ACE inhibitor therapy. Ramipril is the right choice for cardiac protection, but 2.5mg is the starting dose. Standard titration would be to 5mg. Discuss at next PCP visit. Monitor for cough or dizziness.",
-            priority: .action
-        ),
-        KeyInsightItem(
-            icon: "✅",
-            title: "CGM avg 96, 99% in range — elite metabolic control",
-            detail: "Average glucose 96 mg/dL with 99% time in range (70-140). HbA1c 5.2% confirms excellent long-term control. However, your TCF7L2 TT genotype means elevated lifetime diabetes risk — never stop monitoring. Continue CGM and low-glycemic habits.",
-            priority: .watch
-        ),
-        KeyInsightItem(
-            icon: "🧬",
-            title: "DNA flagged 3 supplement gaps: retinol, lutein, collagen",
-            detail: "Genetic variants identified: BCMO1 (poor beta-carotene → retinol conversion, supplement preformed vitamin A), CFH (macular degeneration risk, supplement lutein + zeaxanthin), COL5A1 (collagen integrity, supplement hydrolyzed collagen peptides 10g/day).",
-            priority: .action
-        ),
-    ]
 }
 
 struct KeyInsightsView: View {
+    @EnvironmentObject var apiManager: APIManager
     @State private var expandedId: UUID?
+
+    private var insights: [KeyInsightItem] {
+        // Deduplicate by normalized title
+        var seen = Set<String>()
+        return apiManager.criticalAlerts.compactMap { alert -> KeyInsightItem? in
+            let normalizedTitle = alert.title.lowercased().trimmingCharacters(in: .whitespaces)
+            guard !seen.contains(normalizedTitle) else { return nil }
+            seen.insert(normalizedTitle)
+
+            let isWatch = alert.severityColor == "yellow" || alert.severity?.lowercased() == "low"
+            let icon: String = {
+                switch alert.severityColor {
+                case "red": return "🚨"
+                case "orange": return "⚠️"
+                default: return "✅"
+                }
+            }()
+            return KeyInsightItem(
+                icon: icon,
+                title: alert.title,
+                detail: alert.message,
+                priority: isWatch ? .watch : .action
+            )
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -68,23 +61,42 @@ struct KeyInsightsView: View {
                     .foregroundStyle(.orange)
                 Text("Key Insights")
                     .font(.title3.bold())
+                Spacer()
+                Text("\(insights.count) items")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             .padding(.horizontal)
 
-            VStack(spacing: 8) {
-                ForEach(KeyInsightItem.hardcoded) { insight in
-                    InsightRowCard(
-                        insight: insight,
-                        isExpanded: expandedId == insight.id,
-                        onTap: {
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                expandedId = expandedId == insight.id ? nil : insight.id
-                            }
-                        }
-                    )
+            if insights.isEmpty && apiManager.isLoadingDashboard {
+                HStack {
+                    ProgressView().scaleEffect(0.8)
+                    Text("Loading insights…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+                .padding(.horizontal)
+            } else if insights.isEmpty {
+                Text("No critical insights right now — all clear!")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(insights) { insight in
+                        InsightRowCard(
+                            insight: insight,
+                            isExpanded: expandedId == insight.id,
+                            onTap: {
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    expandedId = expandedId == insight.id ? nil : insight.id
+                                }
+                            }
+                        )
+                    }
+                }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
         }
     }
 }
@@ -96,7 +108,6 @@ struct InsightRowCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Collapsed row
             HStack(spacing: 10) {
                 Text(insight.icon)
                     .font(.title3)
@@ -109,15 +120,12 @@ struct InsightRowCard: View {
 
                 Spacer(minLength: 4)
 
-                // Priority badge
                 Text(insight.priority.label)
                     .font(.system(size: 9, weight: .heavy))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(
-                        Capsule().fill(insight.priority.color)
-                    )
+                    .background(Capsule().fill(insight.priority.color))
 
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                     .font(.caption2.bold())
@@ -125,7 +133,6 @@ struct InsightRowCard: View {
             }
             .padding(12)
 
-            // Expanded detail
             if isExpanded {
                 Text(insight.detail)
                     .font(.caption)

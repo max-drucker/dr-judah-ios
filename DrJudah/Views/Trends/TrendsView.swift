@@ -4,7 +4,7 @@ import Charts
 struct TrendsView: View {
     @EnvironmentObject var apiManager: APIManager
 
-    @State private var selectedPeriod = "30d"
+    @State private var selectedPeriod = "90d"
 
     private let periods: [(label: String, value: String)] = [
         ("30 Days", "30d"),
@@ -39,6 +39,9 @@ struct TrendsView: View {
             .navigationTitle("Trends")
             .refreshable {
                 await apiManager.fetchTrends(period: selectedPeriod, force: true)
+            }
+            .task {
+                await apiManager.fetchTrends(period: selectedPeriod)
             }
         }
     }
@@ -109,11 +112,14 @@ struct TrendsView: View {
     // MARK: - Sleep
 
     @ViewBuilder
-    private func sleepSection(_ sleep: TrendsSleep?) -> some View {
+    private func sleepSection(_ nights: [TrendsSleepNight]?) -> some View {
         sectionCard("Sleep", icon: "moon.fill") {
-            if let nights = sleep?.byNight, nights.count >= 2 {
+            if let nights = nights, nights.count >= 2 {
                 sleepDurationChart(nights)
                 sleepStagesChart(nights)
+                if nights.compactMap({ $0.efficiency }).count >= 2 {
+                    sleepEfficiencyChart(nights.filter { $0.efficiency != nil })
+                }
             } else {
                 noDataPlaceholder()
             }
@@ -134,6 +140,9 @@ struct TrendsView: View {
             if let vo2 = fitness?.vo2Max, vo2.count >= 2 {
                 trendLineChart("VO₂ Max", data: vo2, color: .red, unit: "")
             }
+            if let flights = fitness?.flightsClimbed, flights.count >= 2 {
+                trendBarChart("Flights Climbed", data: flights, color: .brown, unit: "flights")
+            }
         }
     }
 
@@ -144,7 +153,7 @@ struct TrendsView: View {
         let all: [TrendsCorrelation] = [
             correlations?.hrvVsSleep,
             correlations?.rhrVsExercise,
-            correlations?.sleepVsRhr
+            correlations?.sleepVsNextRhr
         ].compactMap { $0 }.filter { $0.data.count >= 3 }
 
         if !all.isEmpty {
@@ -253,6 +262,23 @@ struct TrendsView: View {
                     .foregroundStyle(by: .value("Stage", "Core"))
             }
             .chartForegroundStyleScale(["Deep": Color(red: 0.1, green: 0.1, blue: 0.5), "REM": Color.purple, "Core": Color(red: 0.5, green: 0.7, blue: 1.0)])
+            .frame(height: 150)
+            .chartXAxis { dateAxis }
+            .chartYAxis { valueAxis }
+        }
+    }
+
+    private func sleepEfficiencyChart(_ nights: [TrendsSleepNight]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            chartHeader("Sleep Efficiency", value: nights.last.flatMap { $0.efficiency }.map { "\(String(format: "%.0f", $0))%" })
+            Chart(nights) { night in
+                LineMark(x: .value("Date", night.parsedDate), y: .value("Efficiency", night.efficiency ?? 0))
+                    .foregroundStyle(.teal.gradient)
+                    .interpolationMethod(.catmullRom)
+                AreaMark(x: .value("Date", night.parsedDate), y: .value("Efficiency", night.efficiency ?? 0))
+                    .foregroundStyle(.teal.opacity(0.1).gradient)
+                    .interpolationMethod(.catmullRom)
+            }
             .frame(height: 150)
             .chartXAxis { dateAxis }
             .chartYAxis { valueAxis }

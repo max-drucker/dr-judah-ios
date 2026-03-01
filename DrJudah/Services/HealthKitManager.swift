@@ -68,9 +68,11 @@ class HealthKitManager: ObservableObject {
         async let diastolic = fetchTodayAverage(.bloodPressureDiastolic, unit: .millimeterOfMercury())
         async let bodyFat = fetchLatestValue(.bodyFatPercentage, unit: .percent())
         async let leanMass = fetchLatestValue(.leanBodyMass, unit: .gramUnit(with: .kilo))
+        async let weight = fetchLatestValue(.bodyMass, unit: .pound())
 
         let (s, rhr, h, ac, ex, sp, rr, v) = await (steps, restHR, hrv, activeCal, exercise, spo2, respRate, vo2max)
         let (gl, sys, dia, bf, lm) = await (glucose, systolic, diastolic, bodyFat, leanMass)
+        let w = await weight
 
         todayHealth.steps = s
         todayHealth.restingHeartRate = rhr
@@ -85,6 +87,7 @@ class HealthKitManager: ObservableObject {
         todayHealth.bloodPressureDiastolic = dia
         todayHealth.bodyFatPercentage = bf * 100
         todayHealth.leanBodyMass = lm
+        todayHealth.weight = w
 
         // 7-day averages
         async let avgS = fetchAverage(.stepCount, unit: .count(), days: 7, cumulative: true)
@@ -110,6 +113,7 @@ class HealthKitManager: ObservableObject {
         todayHealth.hrvHistory = await fetchDailyValues(.heartRateVariabilitySDNN, unit: .secondUnit(with: .milli), days: 7, cumulative: false)
         todayHealth.bloodGlucoseHistory = await fetchDailyValues(.bloodGlucose, unit: HKUnit(from: "mg/dL"), days: 7, cumulative: false)
         todayHealth.systolicHistory = await fetchDailyValues(.bloodPressureSystolic, unit: .millimeterOfMercury(), days: 7, cumulative: false)
+        todayHealth.weightHistory = await fetchDailyValues(.bodyMass, unit: .pound(), days: 7, cumulative: false)
 
         // Workouts
         recentWorkouts = await fetchRecentWorkouts(days: 1)

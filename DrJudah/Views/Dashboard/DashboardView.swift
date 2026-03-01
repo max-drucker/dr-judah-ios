@@ -112,6 +112,13 @@ struct DashboardView: View {
 
     // MARK: - Health Status Grid
 
+    private var healthCategories: [HealthStatusCategory] {
+        if let config = apiManager.currentState?.sectionConfig, !config.isEmpty {
+            return HealthStatusCategory.from(sectionConfig: config)
+        }
+        return HealthStatusCategory.defaultCategories
+    }
+
     private var healthStatusGrid: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
@@ -126,7 +133,7 @@ struct DashboardView: View {
                 GridItem(.flexible(), spacing: 10),
                 GridItem(.flexible(), spacing: 10),
             ], spacing: 10) {
-                ForEach(HealthStatusCategory.defaultCategories) { category in
+                ForEach(healthCategories) { category in
                     if let path = category.webPath {
                         NavigationLink(value: path) {
                             HealthStatusTileContent(category: category)
@@ -263,6 +270,30 @@ struct DashboardView: View {
                     trend: nil,
                     sparkline: [],
                     color: .blue
+                )
+
+                VitalCard(
+                    icon: "scalemass.fill",
+                    title: "Weight",
+                    value: healthKitManager.todayHealth.weight > 0
+                        ? formatNumber(healthKitManager.todayHealth.weight)
+                        : "--",
+                    unit: "lbs",
+                    trend: nil,
+                    sparkline: healthKitManager.todayHealth.weightHistory.map { $0.1 },
+                    color: .indigo
+                )
+
+                VitalCard(
+                    icon: "figure.arms.open",
+                    title: "Body Fat",
+                    value: healthKitManager.todayHealth.bodyFatPercentage > 0
+                        ? String(format: "%.1f", healthKitManager.todayHealth.bodyFatPercentage)
+                        : "--",
+                    unit: "%",
+                    trend: nil,
+                    sparkline: [],
+                    color: .brown
                 )
             }
             .padding(.horizontal)

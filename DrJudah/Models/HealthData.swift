@@ -41,6 +41,7 @@ struct TodayHealth {
     var bloodOxygenHistory: [(Date, Double)] = []
     var bloodGlucoseHistory: [(Date, Double)] = []
     var systolicHistory: [(Date, Double)] = []
+    var weightHistory: [(Date, Double)] = []
 }
 
 struct Workout: Identifiable {

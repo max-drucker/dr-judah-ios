@@ -476,16 +476,36 @@ struct HealthStatusCategory: Identifiable {
         var color: String { rawValue }
     }
 
-    static let defaultCategories: [HealthStatusCategory] = [
-        HealthStatusCategory(name: "Sleep", icon: "bed.double.fill", status: .orange, summary: "72 avg score", webPath: "/sleep"),
-        HealthStatusCategory(name: "Exercise", icon: "figure.run", status: .orange, summary: "Needs consistency", webPath: nil),
-        HealthStatusCategory(name: "Labs", icon: "flask.fill", status: .green, summary: "LDL 44, HbA1c 5.2", webPath: "/labs"),
-        HealthStatusCategory(name: "Heart", icon: "heart.fill", status: .yellow, summary: "Ca score 49, stable", webPath: nil),
-        HealthStatusCategory(name: "Body Comp", icon: "figure.arms.open", status: .red, summary: "Muscle loss — 7th %ile", webPath: "/imaging"),
-        HealthStatusCategory(name: "Hormones", icon: "cross.vial.fill", status: .orange, summary: "Free T low", webPath: "/labs"),
-        HealthStatusCategory(name: "Brain", icon: "brain.head.profile", status: .green, summary: "MRI current", webPath: "/imaging"),
-        HealthStatusCategory(name: "Nutrition", icon: "leaf.fill", status: .gray, summary: "Coming soon", webPath: nil),
-    ]
+    static let defaultCategories: [HealthStatusCategory] = []
+
+    static func from(sectionConfig: [AnyCodableValue]) -> [HealthStatusCategory] {
+        return sectionConfig.compactMap { item -> HealthStatusCategory? in
+            guard case .dictionary(let dict) = item else { return nil }
+            let title = dict["title"]?.stringValue ?? dict["section_key"]?.stringValue ?? "Unknown"
+            let icon = dict["icon"]?.stringValue ?? "circle.fill"
+            let statusStr = dict["status"]?.stringValue ?? "gray"
+            let summary = dict["assessment_title"]?.stringValue ?? dict["assessment_text"]?.stringValue ?? ""
+            let status: HealthStatus = {
+                switch statusStr.lowercased() {
+                case "green": return .green
+                case "yellow": return .yellow
+                case "orange": return .orange
+                case "red": return .red
+                default: return .gray
+                }
+            }()
+            let webPath: String? = {
+                let key = dict["section_key"]?.stringValue ?? ""
+                switch key {
+                case "sleep": return "/sleep"
+                case "labs", "hormones": return "/labs"
+                case "body_comp", "brain", "imaging": return "/imaging"
+                default: return nil
+                }
+            }()
+            return HealthStatusCategory(name: title, icon: icon, status: status, summary: summary, webPath: webPath)
+        }
+    }
 }
 
 // MARK: - Hardcoded Key Insights
@@ -502,43 +522,38 @@ struct KeyInsight: Identifiable {
         case critical, warning, info
     }
 
-    static let allInsights: [KeyInsight] = [
-        KeyInsight(
-            emoji: "🚨",
-            title: "Muscle Loss Crisis",
-            detail: "ALM Index 7.25 kg/m² puts you at the 7th percentile for your age — clinical sarcopenia territory. DXA confirmed appendicular lean mass is critically low. This is the #1 health priority right now.",
-            severity: .critical,
-            actionType: "ACTION"
-        ),
-        KeyInsight(
-            emoji: "🚨",
-            title: "Sympathetic Overdrive",
-            detail: "Resting HR 91 bpm combined with HRV of only 23ms signals your autonomic nervous system is stuck in fight-or-flight. This pattern correlates with elevated cardiovascular risk and poor recovery.",
-            severity: .critical,
-            actionType: "ACTION"
-        ),
-        KeyInsight(
-            emoji: "⚠️",
-            title: "Diastolic BP Elevated",
-            detail: "Diastolic BP averaging 89 mmHg despite Ramipril 2.5mg. This is borderline Stage 1 hypertension. Current dose may be insufficient — discuss increase to 5mg with your physician.",
-            severity: .warning,
-            actionType: "ACTION"
-        ),
-        KeyInsight(
-            emoji: "✅",
-            title: "CGM Looking Great",
-            detail: "Average glucose 96 mg/dL with 99% time in range (70-140). Your metabolic health is excellent. HbA1c 5.2% confirms long-term glucose control is optimal.",
-            severity: .info,
-            actionType: "WATCH"
-        ),
-        KeyInsight(
-            emoji: "🧬",
-            title: "DNA Flagged 3 Supplement Gaps",
-            detail: "Genetic analysis identified deficiencies in methylation (MTHFR), vitamin D metabolism (VDR), and omega-3 conversion (FADS1). Targeted supplementation recommended.",
-            severity: .warning,
-            actionType: "ACTION"
-        ),
-    ]
+    static let allInsights: [KeyInsight] = []
+
+    static func from(criticalAlerts: [CriticalAlert]) -> [KeyInsight] {
+        // Deduplicate by title — take only the first occurrence of each unique title
+        var seen = Set<String>()
+        return criticalAlerts.compactMap { alert -> KeyInsight? in
+            let normalizedTitle = alert.title.lowercased().trimmingCharacters(in: .whitespaces)
+            guard !seen.contains(normalizedTitle) else { return nil }
+            seen.insert(normalizedTitle)
+            let severity: InsightSeverity = {
+                switch alert.severityColor {
+                case "red": return .critical
+                case "orange": return .warning
+                default: return .info
+                }
+            }()
+            let emoji: String = {
+                switch severity {
+                case .critical: return "🚨"
+                case .warning: return "⚠️"
+                case .info: return "✅"
+                }
+            }()
+            return KeyInsight(
+                emoji: emoji,
+                title: alert.title,
+                detail: alert.message,
+                severity: severity,
+                actionType: severity == .info ? "WATCH" : "ACTION"
+            )
+        }
+    }
 }
 
 // MARK: - Hardcoded Recommendations
@@ -565,78 +580,43 @@ struct AppRecommendation: Identifiable {
         }
     }
 
-    static let allRecommendations: [AppRecommendation] = [
-        AppRecommendation(
-            icon: "dumbbell.fill",
-            title: "Resistance Training + 150g Protein",
-            body: "This is the #1 priority. Progressive resistance training 3-4x/week targeting all major muscle groups, combined with 150g+ daily protein intake. ALM Index at 7th percentile demands aggressive intervention. Consider creatine monohydrate 5g/day as well.",
-            priority: .high,
-            category: "Exercise",
-            actionURL: nil,
-            contactInfo: nil
-        ),
-        AppRecommendation(
-            icon: "cross.vial.fill",
-            title: "TRT Evaluation — Now Medically Necessary",
-            body: "Free testosterone is persistently low despite optimization attempts. Combined with sarcopenia (7th percentile muscle mass), TRT evaluation is now medically justified. Discuss with endocrinologist — options include topical gel or weekly injections.",
-            priority: .high,
-            category: "Hormones",
-            actionURL: nil,
-            contactInfo: "Dr. Patel — Endocrinology"
-        ),
-        AppRecommendation(
-            icon: "brain.head.profile",
-            title: "Brain MRI — Next Due May 2026",
-            body: "Routine surveillance brain MRI. Last scan was clear. Continue annual monitoring given family history. Schedule through Stanford Radiology.",
-            priority: .medium,
-            category: "Screening",
-            actionURL: nil,
-            contactInfo: "Stanford Radiology: (650) 723-6855"
-        ),
-        AppRecommendation(
-            icon: "heart.fill",
-            title: "Address Tachycardia",
-            body: "Resting HR 91 bpm + HRV 23ms is concerning. Rule out: thyroid dysfunction (TSH was normal), sleep apnea, medication side effects, deconditioning. Consider a cardiology consult if persistent after lifestyle optimization. Beta-blocker may be warranted.",
-            priority: .high,
-            category: "Heart",
-            actionURL: nil,
-            contactInfo: "Dr. Chen — Cardiology"
-        ),
-        AppRecommendation(
-            icon: "pill.fill",
-            title: "3 New Genetically-Driven Supplements",
-            body: "Based on DNA analysis: (1) Methylfolate 1mg/day (MTHFR variant), (2) Vitamin D3 5000 IU/day (VDR variant — poor absorption), (3) EPA/DHA 2g/day (FADS1 — poor omega conversion). All available on Amazon.",
-            priority: .high,
-            category: "Supplements",
-            actionURL: "https://www.amazon.com",
-            contactInfo: nil
-        ),
-        AppRecommendation(
-            icon: "pill.circle.fill",
-            title: "Continue Methylated B Vitamins",
-            body: "Methylated B-complex 3-4x per week is appropriate given your MTHFR status. Don't take daily — excess methylation can cause anxiety and insomnia. Current protocol is working well per homocysteine levels.",
-            priority: .high,
-            category: "Supplements",
-            actionURL: nil,
-            contactInfo: nil
-        ),
-        AppRecommendation(
-            icon: "heart.circle.fill",
-            title: "Discuss Ramipril Dose Increase",
-            body: "Current Ramipril 2.5mg is not adequately controlling diastolic BP (averaging 89 mmHg). Standard titration would be to 5mg. Discuss at next PCP visit. Monitor for dizziness or cough.",
-            priority: .medium,
-            category: "Medications",
-            actionURL: nil,
-            contactInfo: "Dr. Kim — Primary Care"
-        ),
-        AppRecommendation(
-            icon: "flame.fill",
-            title: "Anti-Inflammatory Protocol",
-            body: "hs-CRP trending up suggests systemic inflammation. Protocol: (1) Omega-3 EPA/DHA 2g/day, (2) Curcumin with piperine 1g/day, (3) Reduce processed foods, (4) Prioritize sleep quality. Recheck hs-CRP in 3 months.",
-            priority: .medium,
-            category: "Lifestyle",
-            actionURL: nil,
-            contactInfo: nil
-        ),
-    ]
+    static let allRecommendations: [AppRecommendation] = []
+
+    static func from(recommendations: [RecommendationItem]) -> [AppRecommendation] {
+        // Deduplicate by normalized title
+        var seen = Set<String>()
+        return recommendations.compactMap { rec -> AppRecommendation? in
+            let normalizedTitle = rec.title.lowercased().trimmingCharacters(in: .whitespaces)
+            guard !seen.contains(normalizedTitle) else { return nil }
+            seen.insert(normalizedTitle)
+            let priority: RecommendationPriority = {
+                switch rec.priority?.lowercased() {
+                case "high", "urgent", "critical": return .high
+                default: return .medium
+                }
+            }()
+            let icon: String = {
+                switch rec.category?.lowercased() {
+                case "exercise", "fitness": return "dumbbell.fill"
+                case "heart", "cardiac", "cardiovascular": return "heart.fill"
+                case "hormones": return "cross.vial.fill"
+                case "screening": return "calendar.badge.clock"
+                case "supplements": return "pill.fill"
+                case "medications": return "pill.circle.fill"
+                case "brain", "neuro": return "brain.head.profile"
+                case "lifestyle": return "flame.fill"
+                default: return "stethoscope"
+                }
+            }()
+            return AppRecommendation(
+                icon: icon,
+                title: rec.title,
+                body: rec.body ?? "",
+                priority: priority,
+                category: rec.category ?? "General",
+                actionURL: rec.actionURL,
+                contactInfo: rec.contactInfo
+            )
+        }
+    }
 }

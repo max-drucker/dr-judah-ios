@@ -5,7 +5,7 @@ import Foundation
 struct TrendsAPIResponse: Codable {
     let cardio: TrendsCardio?
     let metabolic: TrendsMetabolic?
-    let sleep: TrendsSleep?
+    let sleep: [TrendsSleepNight]?
     let fitness: TrendsFitness?
     let correlations: TrendsCorrelations?
 }
@@ -63,20 +63,18 @@ struct TrendsGlucose: Codable, Identifiable {
 
 // MARK: - Sleep
 
-struct TrendsSleep: Codable {
-    let byNight: [TrendsSleepNight]?
-}
-
 struct TrendsSleepNight: Codable, Identifiable {
-    let night: String
+    let date: String
     let total: Double
     let deep: Double?
     let rem: Double?
     let core: Double?
-    var id: String { night }
+    let awake: Double?
+    let efficiency: Double?
+    var id: String { date }
 
     var parsedDate: Date {
-        TrendsDateParser.parse(night)
+        TrendsDateParser.parse(date)
     }
 }
 
@@ -86,6 +84,7 @@ struct TrendsFitness: Codable {
     let steps: [TrendsDateValue]?
     let exerciseMinutes: [TrendsDateValue]?
     let vo2Max: [TrendsDateValue]?
+    let flightsClimbed: [TrendsDateValue]?
 }
 
 // MARK: - Correlations
@@ -93,7 +92,7 @@ struct TrendsFitness: Codable {
 struct TrendsCorrelations: Codable {
     let hrvVsSleep: TrendsCorrelation?
     let rhrVsExercise: TrendsCorrelation?
-    let sleepVsRhr: TrendsCorrelation?
+    let sleepVsNextRhr: TrendsCorrelation?
 }
 
 struct TrendsCorrelation: Codable, Identifiable {

@@ -129,7 +129,7 @@ class APIManager: ObservableObject {
 
     // MARK: - Trends
 
-    func fetchTrends(period: String = "30d", force: Bool = false) async {
+    func fetchTrends(period: String = "90d", force: Bool = false) async {
         if !force, let cacheTime = trendsCacheTime, Date().timeIntervalSince(cacheTime) < cacheTTL {
             return
         }

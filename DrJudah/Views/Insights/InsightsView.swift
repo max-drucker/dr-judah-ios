@@ -19,10 +19,6 @@ struct InsightsView: View {
                             .padding(.horizontal)
                     }
 
-                    // Key Insights
-                    keyInsightsSection
-                        .padding(.horizontal)
-
                     // Recommendations
                     recommendationsSection
                         .padding(.horizontal)
@@ -85,22 +81,7 @@ struct InsightsView: View {
         }
     }
 
-    // MARK: - Key Insights
-
-    private var keyInsightsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(Color(hex: "3B82F6"))
-                Text("Key Insights")
-                    .font(.headline)
-            }
-
-            ForEach(KeyInsight.allInsights) { insight in
-                InsightCard(insight: insight)
-            }
-        }
-    }
+    // Key Insights section removed — now using dynamic API alerts above to avoid duplication
 
     // MARK: - Recommendations
 
@@ -113,13 +94,20 @@ struct InsightsView: View {
                     .font(.headline)
             }
 
-            ForEach(AppRecommendation.allRecommendations) { rec in
+            ForEach(dynamicRecommendations) { rec in
                 RecommendationCard(recommendation: rec)
             }
         }
     }
 
     // MARK: - Overdue Screenings
+
+    private var dynamicRecommendations: [AppRecommendation] {
+        if let recs = apiManager.currentState?.recommendations, !recs.isEmpty {
+            return AppRecommendation.from(recommendations: recs)
+        }
+        return AppRecommendation.allRecommendations
+    }
 
     private var activeScreenings: [OverdueScreening] {
         apiManager.overdueScreenings.filter { !dismissedAlerts.contains($0.name) }

@@ -163,7 +163,28 @@ struct VitalsView: View {
     }
 
     private var bodyCompVitals: [VitalItem] {
-        [
+        let weight = healthKitManager.todayHealth.weight
+        // Calculate BMI: weight (lbs) / height (in)^2 * 703, height = 5'10" = 70 in
+        let bmi = weight > 0 ? (weight / (70.0 * 70.0)) * 703.0 : 0
+        return [
+            VitalItem(
+                icon: "scalemass.fill",
+                title: "Weight",
+                value: weight > 0 ? String(format: "%.1f", weight) : "--",
+                unit: "lbs",
+                trend: nil,
+                sparkline: healthKitManager.todayHealth.weightHistory.map { $0.1 },
+                color: .indigo
+            ),
+            VitalItem(
+                icon: "figure.stand",
+                title: "BMI",
+                value: bmi > 0 ? String(format: "%.1f", bmi) : "--",
+                unit: "",
+                trend: nil,
+                sparkline: [],
+                color: .blue
+            ),
             VitalItem(
                 icon: "percent",
                 title: "Body Fat",
@@ -181,6 +202,15 @@ struct VitalsView: View {
                 trend: nil,
                 sparkline: [],
                 color: .green
+            ),
+            VitalItem(
+                icon: "bone",
+                title: "Bone Density",
+                value: healthKitManager.todayHealth.boneMineralDensity > 0 ? String(format: "%.2f", healthKitManager.todayHealth.boneMineralDensity) : "--",
+                unit: "g/cm²",
+                trend: nil,
+                sparkline: [],
+                color: .mint
             ),
         ]
     }
