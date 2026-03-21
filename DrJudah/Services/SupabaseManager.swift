@@ -110,6 +110,43 @@ class SupabaseManager {
                     .execute()
             }
         }
+
+        // Sync medications
+        if !data.medications.isEmpty {
+            var seenMeds = Set<String>()
+            var dedupedMeds: [MedicationLogRecord] = []
+            for m in data.medications.reversed() {
+                let key = "\(m.sourceIdentifier)"
+                if !seenMeds.contains(key) {
+                    seenMeds.insert(key)
+                    dedupedMeds.append(m)
+                }
+            }
+            dedupedMeds.reverse()
+
+            let batches = stride(from: 0, to: dedupedMeds.count, by: 500).map {
+                Array(dedupedMeds[$0..<min($0 + 500, dedupedMeds.count)])
+            }
+            for batch in batches {
+                let rows = batch.map { m -> [String: AnyJSON] in
+                    var row: [String: AnyJSON] = [
+                        "user_id": .string(userId),
+                        "medication_name": .string(m.medicationName),
+                        "administered_at": .string(isoFormatter.string(from: m.administeredAt)),
+                        "source": .string("apple_health"),
+                        "source_identifier": .string(m.sourceIdentifier),
+                    ]
+                    if let dosage = m.dosage { row["dosage"] = .string(dosage) }
+                    if let endedAt = m.endedAt { row["ended_at"] = .string(isoFormatter.string(from: endedAt)) }
+                    if let route = m.route { row["route"] = .string(route) }
+                    if let notes = m.notes { row["notes"] = .string(notes) }
+                    return row
+                }
+                try await client.from("medications_log")
+                    .upsert(rows, onConflict: "user_id,source_identifier")
+                    .execute()
+            }
+        }
     }
 
     // MARK: - Omron BP CSV Upload

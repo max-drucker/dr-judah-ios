@@ -38,6 +38,10 @@ class HealthKitManager: ObservableObject {
             HKCategoryType(.sleepAnalysis),
             HKObjectType.workoutType(),
         ]
+        // Clinical records (medications) — requires Health Records entitlement
+        if let medType = HKObjectType.clinicalType(forIdentifier: .medicationRecord) {
+            types.insert(medType)
+        }
         return types
     }()
 
@@ -319,7 +323,10 @@ class HealthKitManager: ObservableObject {
         // Sleep
         let sleepRecords = await fetchSleepData(since: since)
 
-        return SyncPayload(vitals: vitals, workouts: workoutRecords, sleepSessions: sleepRecords)
+        // Medications
+        let medicationRecords = await fetchMedicationRecords(since: since)
+
+        return SyncPayload(vitals: vitals, workouts: workoutRecords, sleepSessions: sleepRecords, medications: medicationRecords)
     }
 
     private func fetchSamples(_ identifier: HKQuantityTypeIdentifier, since: Date, limit: Int = 5000) async -> [HKQuantitySample] {
@@ -364,6 +371,83 @@ class HealthKitManager: ObservableObject {
                     }
                     return SleepRecord(sleepStage: stage, startedAt: sample.startDate, endedAt: sample.endDate)
                 } ?? []
+                continuation.resume(returning: records)
+            }
+            store.execute(query)
+        }
+    }
+
+    // MARK: - Medication Records
+
+    func fetchMedicationRecords(since: Date) async -> [MedicationLogRecord] {
+        guard let medType = HKObjectType.clinicalType(forIdentifier: .medicationRecord) else {
+            print("Medication records not available on this device")
+            return []
+        }
+
+        let predicate = HKQuery.predicateForSamples(withStart: since, end: Date(), options: .strictStartDate)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(sampleType: medType, predicate: predicate, limit: 1000, sortDescriptors: [sort]) { _, samples, error in
+                if let error = error {
+                    print("Medication fetch error: \(error.localizedDescription)")
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                guard let clinicalSamples = samples as? [HKClinicalRecord] else {
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                let records: [MedicationLogRecord] = clinicalSamples.compactMap { sample in
+                    // Parse FHIR resource for medication details
+                    var medicationName = sample.displayName
+                    var dosage: String? = nil
+                    var route: String? = nil
+                    var notes: String? = nil
+
+                    // Try to extract details from FHIR resource
+                    if let fhirResource = sample.fhirResource,
+                       let data = fhirResource.data as Data?,
+                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+
+                        // MedicationStatement or MedicationAdministration FHIR resources
+                        if let medCodeable = json["medicationCodeableConcept"] as? [String: Any],
+                           let text = medCodeable["text"] as? String {
+                            medicationName = text
+                        }
+
+                        // Extract dosage
+                        if let dosageArray = json["dosage"] as? [[String: Any]],
+                           let firstDosage = dosageArray.first {
+                            if let doseText = firstDosage["text"] as? String {
+                                dosage = doseText
+                            }
+                            if let routeObj = firstDosage["route"] as? [String: Any],
+                               let routeText = routeObj["text"] as? String {
+                                route = routeText
+                            }
+                        }
+
+                        // Extract notes
+                        if let noteText = json["note"] as? [[String: Any]] {
+                            notes = noteText.compactMap { $0["text"] as? String }.joined(separator: "; ")
+                        }
+                    }
+
+                    return MedicationLogRecord(
+                        medicationName: medicationName,
+                        dosage: dosage,
+                        administeredAt: sample.startDate,
+                        endedAt: sample.endDate != sample.startDate ? sample.endDate : nil,
+                        route: route,
+                        notes: notes,
+                        sourceIdentifier: sample.uuid.uuidString
+                    )
+                }
+
                 continuation.resume(returning: records)
             }
             store.execute(query)

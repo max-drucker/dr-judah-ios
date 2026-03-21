@@ -94,6 +94,17 @@ struct SyncPayload {
     let vitals: [VitalRecord]
     let workouts: [WorkoutRecord]
     let sleepSessions: [SleepRecord]
+    let medications: [MedicationLogRecord]
+}
+
+struct MedicationLogRecord: Codable {
+    let medicationName: String
+    let dosage: String?
+    let administeredAt: Date
+    let endedAt: Date?
+    let route: String?         // e.g., "injection", "oral"
+    let notes: String?
+    let sourceIdentifier: String  // unique ID from HealthKit to deduplicate
 }
 
 struct VitalRecord: Codable {

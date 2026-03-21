@@ -10,6 +10,7 @@ class BackgroundSyncManager: ObservableObject {
     @Published var syncedVitalsCount: Int = 0
     @Published var syncedWorkoutsCount: Int = 0
     @Published var syncedSleepCount: Int = 0
+    @Published var syncedMedicationsCount: Int = 0
     @Published var syncProgress: String = ""
 
     private let lastSyncKey = "lastHealthSyncDate"
@@ -83,6 +84,7 @@ class BackgroundSyncManager: ObservableObject {
             syncedVitalsCount = payload.vitals.count
             syncedWorkoutsCount = payload.workouts.count
             syncedSleepCount = payload.sleepSessions.count
+            syncedMedicationsCount = payload.medications.count
 
             syncProgress = "Uploading \(payload.vitals.count) vitals…"
             try await SupabaseManager.shared.syncHealthData(data: payload)

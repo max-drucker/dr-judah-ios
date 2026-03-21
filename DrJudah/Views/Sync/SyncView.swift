@@ -54,11 +54,12 @@ struct SyncView: View {
                 }
 
                 // Last Sync Results
-                if syncManager.syncedVitalsCount > 0 || syncManager.syncedWorkoutsCount > 0 || syncManager.syncedSleepCount > 0 {
+                if syncManager.syncedVitalsCount > 0 || syncManager.syncedWorkoutsCount > 0 || syncManager.syncedSleepCount > 0 || syncManager.syncedMedicationsCount > 0 {
                     Section("Last Sync Results") {
                         DataTypeRow(icon: "heart.fill", title: "Vitals", count: syncManager.syncedVitalsCount, color: .red)
                         DataTypeRow(icon: "figure.run", title: "Workouts", count: syncManager.syncedWorkoutsCount, color: .green)
                         DataTypeRow(icon: "bed.double.fill", title: "Sleep", count: syncManager.syncedSleepCount, color: .indigo)
+                        DataTypeRow(icon: "pills.fill", title: "Medications", count: syncManager.syncedMedicationsCount, color: .blue)
                     }
                 }
 
@@ -92,6 +93,7 @@ struct SyncView: View {
                     DataTypeRow(icon: "bed.double.fill", title: "Sleep", color: .indigo)
                     DataTypeRow(icon: "dumbbell.fill", title: "Workouts", color: .green)
                     DataTypeRow(icon: "scalemass.fill", title: "Body Mass", color: .gray)
+                    DataTypeRow(icon: "pills.fill", title: "Medications", color: .blue)
                 }
 
                 // Info
