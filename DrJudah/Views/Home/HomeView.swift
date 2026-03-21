@@ -226,7 +226,7 @@ struct HomeView: View {
                 Image(systemName: "flame.fill")
                     .font(.subheadline.bold())
                     .foregroundStyle(.orange)
-                Text("Today's Workouts")
+                Text("Recent Workouts")
                     .font(.title3.bold())
             }
             .padding(.horizontal)

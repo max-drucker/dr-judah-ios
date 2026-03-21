@@ -116,7 +116,7 @@ class HealthKitManager: ObservableObject {
         todayHealth.weightHistory = await fetchDailyValues(.bodyMass, unit: .pound(), days: 7, cumulative: false)
 
         // Workouts
-        recentWorkouts = await fetchRecentWorkouts(days: 1)
+        recentWorkouts = await fetchRecentWorkouts(days: 7)
 
         // Generate insights
         insights = generateInsights()
