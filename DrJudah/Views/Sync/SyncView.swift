@@ -54,12 +54,36 @@ struct SyncView: View {
                 }
 
                 // Last Sync Results
-                if syncManager.syncedVitalsCount > 0 || syncManager.syncedWorkoutsCount > 0 || syncManager.syncedSleepCount > 0 || syncManager.syncedMedicationsCount > 0 {
+                if syncManager.syncedVitalsCount > 0 || syncManager.syncedWorkoutsCount > 0 || syncManager.syncedSleepCount > 0 || syncManager.syncedMedicationsCount > 0 || syncManager.lastVitalsSync != nil || syncManager.lastWorkoutsSync != nil || syncManager.lastSleepSync != nil || syncManager.lastMedsSync != nil {
                     Section("Last Sync Results") {
-                        DataTypeRow(icon: "heart.fill", title: "Vitals", count: syncManager.syncedVitalsCount, color: .red)
-                        DataTypeRow(icon: "figure.run", title: "Workouts", count: syncManager.syncedWorkoutsCount, color: .green)
-                        DataTypeRow(icon: "bed.double.fill", title: "Sleep", count: syncManager.syncedSleepCount, color: .indigo)
-                        DataTypeRow(icon: "pills.fill", title: "Medications", count: syncManager.syncedMedicationsCount, color: .blue)
+                        syncResultRow(
+                            icon: "heart.fill",
+                            title: "Vitals",
+                            count: syncManager.syncedVitalsCount,
+                            lastSync: syncManager.lastVitalsSync,
+                            color: .red
+                        )
+                        syncResultRow(
+                            icon: "figure.run",
+                            title: "Workouts",
+                            count: syncManager.syncedWorkoutsCount,
+                            lastSync: syncManager.lastWorkoutsSync,
+                            color: .green
+                        )
+                        syncResultRow(
+                            icon: "bed.double.fill",
+                            title: "Sleep",
+                            count: syncManager.syncedSleepCount,
+                            lastSync: syncManager.lastSleepSync,
+                            color: .indigo
+                        )
+                        syncResultRow(
+                            icon: "pills.fill",
+                            title: "Medications",
+                            count: syncManager.syncedMedicationsCount,
+                            lastSync: syncManager.lastMedsSync,
+                            color: .blue
+                        )
                     }
                 }
 
@@ -110,6 +134,40 @@ struct SyncView: View {
                 }
             }
             .navigationTitle("Sync & Settings")
+        }
+    }
+
+    @ViewBuilder
+    private func syncResultRow(icon: String, title: String, count: Int, lastSync: Date?, color: Color) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.body)
+                .foregroundStyle(color)
+                .frame(width: 28)
+
+            Text(title)
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("\(count) records")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if let lastSync {
+                    Text(lastSync.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                } else {
+                    Text("Never")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                .font(.caption)
         }
     }
 }

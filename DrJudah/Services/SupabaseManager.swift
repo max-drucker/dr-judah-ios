@@ -23,12 +23,19 @@ class SupabaseManager {
     // MARK: - Sync Health Data
 
     func syncHealthData(data: SyncPayload) async throws {
+        try await syncVitals(data.vitals)
+        try await syncWorkouts(data.workouts)
+        try await syncSleep(data.sleepSessions)
+        try await syncMedications(data.medications)
+    }
+
+    func syncVitals(_ vitals: [VitalRecord]) async throws {
         // Sync vitals in batches of 500, deduplicating within each batch
-        if !data.vitals.isEmpty {
+        if !vitals.isEmpty {
             // Deduplicate: keep last value per (metricType, recordedAt)
             var seen = Set<String>()
             var dedupedVitals: [VitalRecord] = []
-            for vital in data.vitals.reversed() {
+            for vital in vitals.reversed() {
                 let key = "\(vital.metricType)|\(isoFormatter.string(from: vital.recordedAt))"
                 if !seen.contains(key) {
                     seen.insert(key)
@@ -56,10 +63,12 @@ class SupabaseManager {
                     .execute()
             }
         }
+    }
 
+    func syncWorkouts(_ workouts: [WorkoutRecord]) async throws {
         // Sync workouts
-        if !data.workouts.isEmpty {
-            let rows = data.workouts.map { w -> [String: AnyJSON] in
+        if !workouts.isEmpty {
+            let rows = workouts.map { w -> [String: AnyJSON] in
                 var row: [String: AnyJSON] = [
                     "user_id": .string(userId),
                     "workout_type": .string(w.workoutType),
@@ -78,12 +87,14 @@ class SupabaseManager {
                 .upsert(rows, onConflict: "user_id,workout_type,started_at")
                 .execute()
         }
+    }
 
+    func syncSleep(_ sleep: [SleepRecord]) async throws {
         // Sync sleep in batches, deduplicating
-        if !data.sleepSessions.isEmpty {
+        if !sleep.isEmpty {
             var seenSleep = Set<String>()
             var dedupedSleep: [SleepRecord] = []
-            for s in data.sleepSessions.reversed() {
+            for s in sleep.reversed() {
                 let key = "\(s.sleepStage)|\(isoFormatter.string(from: s.startedAt))"
                 if !seenSleep.contains(key) {
                     seenSleep.insert(key)
@@ -110,12 +121,14 @@ class SupabaseManager {
                     .execute()
             }
         }
+    }
 
+    func syncMedications(_ meds: [MedicationLogRecord]) async throws {
         // Sync medications
-        if !data.medications.isEmpty {
+        if !meds.isEmpty {
             var seenMeds = Set<String>()
             var dedupedMeds: [MedicationLogRecord] = []
-            for m in data.medications.reversed() {
+            for m in meds.reversed() {
                 let key = "\(m.sourceIdentifier)"
                 if !seenMeds.contains(key) {
                     seenMeds.insert(key)

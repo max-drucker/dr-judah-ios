@@ -270,6 +270,20 @@ class HealthKitManager: ObservableObject {
     // MARK: - Full Sync (2 years of data)
 
     func fetchAllForSync(since: Date) async -> SyncPayload {
+        async let vitals = fetchVitalsForSync(since: since)
+        async let workouts = fetchWorkoutsForSync(since: since)
+        async let sleepSessions = fetchSleepForSync(since: since)
+        async let medications = fetchMedicationsForSync(since: since)
+
+        return await SyncPayload(
+            vitals: vitals,
+            workouts: workouts,
+            sleepSessions: sleepSessions,
+            medications: medications
+        )
+    }
+
+    func fetchVitalsForSync(since: Date) async -> [VitalRecord] {
         let metrics: [(HKQuantityTypeIdentifier, String, HKUnit)] = [
             (.heartRate, "heart_rate", .count().unitDivided(by: .minute())),
             (.restingHeartRate, "resting_heart_rate", .count().unitDivided(by: .minute())),
@@ -295,7 +309,7 @@ class HealthKitManager: ObservableObject {
         var vitals: [VitalRecord] = []
 
         for (identifier, name, unit) in metrics {
-            let samples = await fetchSamples(identifier, since: since, limit: 5000)
+            let samples = await fetchSamples(identifier, since: since, limit: 2000)
             for sample in samples {
                 vitals.append(VitalRecord(
                     metricType: name,
@@ -306,27 +320,51 @@ class HealthKitManager: ObservableObject {
             }
         }
 
-        // Workouts (last 2 years)
-        let workoutRecords = await fetchRecentWorkouts(days: 730).map { w in
-            WorkoutRecord(
-                workoutType: w.typeName.lowercased(),
-                durationMinutes: w.durationMinutes,
-                caloriesBurned: w.calories,
-                distanceMeters: w.distance,
-                avgHeartRate: w.avgHeartRate,
-                maxHeartRate: w.maxHeartRate,
-                startedAt: w.startDate,
-                endedAt: w.endDate
-            )
+        return vitals
+    }
+
+    func fetchWorkoutsForSync(since: Date) async -> [WorkoutRecord] {
+        let predicate = HKQuery.predicateForSamples(withStart: since, end: Date(), options: .strictStartDate)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(sampleType: .workoutType(), predicate: predicate, limit: 500, sortDescriptors: [sort]) { _, samples, _ in
+                let records = (samples as? [HKWorkout])?.map { w in
+                    let workoutType = Workout(
+                        id: w.uuid,
+                        type: w.workoutActivityType,
+                        duration: w.duration,
+                        calories: w.totalEnergyBurned?.doubleValue(for: .kilocalorie()) ?? 0,
+                        distance: w.totalDistance?.doubleValue(for: .meter()),
+                        avgHeartRate: nil,
+                        maxHeartRate: nil,
+                        startDate: w.startDate,
+                        endDate: w.endDate
+                    ).typeName.lowercased()
+
+                    WorkoutRecord(
+                        workoutType: workoutType,
+                        durationMinutes: w.duration / 60.0,
+                        caloriesBurned: w.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
+                        distanceMeters: w.totalDistance?.doubleValue(for: .meter()),
+                        avgHeartRate: nil,
+                        maxHeartRate: nil,
+                        startedAt: w.startDate,
+                        endedAt: w.endDate
+                    )
+                } ?? []
+                continuation.resume(returning: records)
+            }
+            store.execute(query)
         }
+    }
 
-        // Sleep
-        let sleepRecords = await fetchSleepData(since: since)
+    func fetchSleepForSync(since: Date) async -> [SleepRecord] {
+        await fetchSleepData(since: since)
+    }
 
-        // Medications
-        let medicationRecords = await fetchMedicationRecords(since: since)
-
-        return SyncPayload(vitals: vitals, workouts: workoutRecords, sleepSessions: sleepRecords, medications: medicationRecords)
+    func fetchMedicationsForSync(since: Date) async -> [MedicationLogRecord] {
+        await fetchMedicationRecords(since: since)
     }
 
     private func fetchSamples(_ identifier: HKQuantityTypeIdentifier, since: Date, limit: Int = 5000) async -> [HKQuantitySample] {
