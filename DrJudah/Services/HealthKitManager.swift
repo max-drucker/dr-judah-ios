@@ -352,7 +352,7 @@ class HealthKitManager: ObservableObject {
                         startedAt: w.startDate,
                         endedAt: w.endDate
                     )
-                } ?? []
+                } ?? [] as [WorkoutRecord]
                 continuation.resume(returning: records)
             }
             store.execute(query)
