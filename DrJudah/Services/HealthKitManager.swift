@@ -329,8 +329,17 @@ class HealthKitManager: ObservableObject {
         let predicate = HKQuery.predicateForSamples(withStart: since, end: Date(), options: .strictStartDate)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
 
+        // Debug: check authorization status for workouts
+        let workoutAuthStatus = store.authorizationStatus(for: .workoutType())
+        print("[DrJudah] Workout auth status: \(workoutAuthStatus.rawValue) (1=notDetermined, 2=denied, 3=authorized)")
+        print("[DrJudah] Fetching workouts since: \(since)")
+
         return await withCheckedContinuation { continuation in
-            let query = HKSampleQuery(sampleType: .workoutType(), predicate: predicate, limit: 500, sortDescriptors: [sort]) { _, samples, _ in
+            let query = HKSampleQuery(sampleType: .workoutType(), predicate: predicate, limit: 500, sortDescriptors: [sort]) { _, samples, error in
+                if let error = error {
+                    print("[DrJudah] Workout fetch error: \(error.localizedDescription)")
+                }
+                print("[DrJudah] Workout samples returned: \(samples?.count ?? -1)")
                 let records = (samples as? [HKWorkout])?.map { w in
                     let workoutType = Workout(
                         id: w.uuid,

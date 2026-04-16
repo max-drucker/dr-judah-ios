@@ -69,6 +69,11 @@ struct Workout: Identifiable {
         case .elliptical: return "figure.elliptical"
         case .rowing: return "figure.rowing"
         case .hiking: return "figure.hiking"
+        case .tennis: return "figure.tennis"
+        case .pickleball: return "figure.pickleball"
+        case .snowboarding: return "figure.snowboarding"
+        case .surfingSports: return "figure.surfing"
+        case .golf: return "figure.golf"
         default: return "figure.mixed.cardio"
         }
     }
@@ -85,6 +90,11 @@ struct Workout: Identifiable {
         case .elliptical: return "Elliptical"
         case .rowing: return "Rowing"
         case .hiking: return "Hiking"
+        case .tennis: return "Tennis"
+        case .pickleball: return "Pickleball"
+        case .snowboarding: return "Snowboarding"
+        case .surfingSports: return "Surfing"
+        case .golf: return "Golf"
         default: return "Workout"
         }
     }
