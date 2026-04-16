@@ -342,7 +342,7 @@ class HealthKitManager: ObservableObject {
                         endDate: w.endDate
                     ).typeName.lowercased()
 
-                    WorkoutRecord(
+                    return WorkoutRecord(
                         workoutType: workoutType,
                         durationMinutes: w.duration / 60.0,
                         caloriesBurned: w.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
