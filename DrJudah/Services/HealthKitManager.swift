@@ -39,9 +39,11 @@ class HealthKitManager: ObservableObject {
             HKObjectType.workoutType(),
         ]
         // Clinical records (medications) — requires Health Records entitlement
-        if let medType = HKObjectType.clinicalType(forIdentifier: .medicationRecord) {
-            types.insert(medType)
-        }
+        // Only include if the entitlement is present; requesting without it crashes
+        // To enable: add "health-records" to com.apple.developer.healthkit.access in entitlements
+        // if let medType = HKObjectType.clinicalType(forIdentifier: .medicationRecord) {
+        //     types.insert(medType)
+        // }
         return types
     }()
 
@@ -418,8 +420,11 @@ class HealthKitManager: ObservableObject {
     // MARK: - Medication Records
 
     func fetchMedicationRecords(since: Date) async -> [MedicationLogRecord] {
-        guard let medType = HKObjectType.clinicalType(forIdentifier: .medicationRecord) else {
-            print("Medication records not available on this device")
+        // Clinical records require "health-records" in com.apple.developer.healthkit.access entitlement
+        // Without it, even querying the type will crash. Check readTypes to see if we included it.
+        guard let medType = HKObjectType.clinicalType(forIdentifier: .medicationRecord),
+              readTypes.contains(medType) else {
+            print("Medication records not available (missing entitlement or unsupported device)")
             return []
         }
 

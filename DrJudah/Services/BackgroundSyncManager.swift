@@ -151,8 +151,10 @@ class BackgroundSyncManager: ObservableObject {
         }
 
         syncProgress = "Checking for anomalies…"
-        await healthKit.fetchAllData()
-        NotificationManager.shared.checkAndNotify(health: healthKit.todayHealth)
+        if isAuthorized {
+            await healthKit.fetchAllData()
+            NotificationManager.shared.checkAndNotify(health: healthKit.todayHealth)
+        }
 
         let attemptedAt = Date()
         lastSyncDate = attemptedAt
