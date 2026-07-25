@@ -74,6 +74,18 @@ class BackgroundSyncManager: ObservableObject {
         }
     }
 
+    /// Rolling lookback window for a sync watermark.
+    ///
+    /// HealthKit samples can be *written* long after their `startDate` (delayed Apple Watch sync,
+    /// third-party apps like Strava/Peloton backfilling, manual retroactive entries). A strict
+    /// "since last sync" predicate on `startDate` permanently loses those. Re-scanning a buffer
+    /// window every sync is safe because all Supabase writes are upserts (idempotent).
+    private func lookbackDate(from watermark: Date?, fallback: Date, days: Int) -> Date {
+        guard let watermark else { return fallback }
+        let shifted = Calendar.current.date(byAdding: .day, value: -days, to: watermark) ?? fallback
+        return min(max(shifted, fallback), watermark)
+    }
+
     func performSync() async {
         isSyncing = true
         syncError = nil
@@ -99,7 +111,9 @@ class BackgroundSyncManager: ObservableObject {
         if isAuthorized {
             syncProgress = "Syncing sleep…"
             do {
-                let sleepRecords = await healthKit.fetchSleepForSync(since: lastSleepSync ?? fallbackSince)
+                let since = lookbackDate(from: lastSleepSync, fallback: fallbackSince, days: 45)
+                print("[DrJudah] Sleep sync since: \(since) (watermark: \(lastSleepSync?.description ?? "none"))")
+                let sleepRecords = await healthKit.fetchSleepForSync(since: since)
                 syncedSleepCount = sleepRecords.count
                 syncProgress = "Uploading \(sleepRecords.count) sleep records…"
                 try await SupabaseManager.shared.syncSleep(sleepRecords)
@@ -112,7 +126,9 @@ class BackgroundSyncManager: ObservableObject {
 
             syncProgress = "Syncing workouts…"
             do {
-                let workoutRecords = await healthKit.fetchWorkoutsForSync(since: lastWorkoutsSync ?? fallbackSince)
+                let since = lookbackDate(from: lastWorkoutsSync, fallback: fallbackSince, days: 45)
+                print("[DrJudah] Workout sync since: \(since) (watermark: \(lastWorkoutsSync?.description ?? "none"))")
+                let workoutRecords = await healthKit.fetchWorkoutsForSync(since: since)
                 syncedWorkoutsCount = workoutRecords.count
                 syncProgress = "Uploading \(workoutRecords.count) workouts…"
                 try await SupabaseManager.shared.syncWorkouts(workoutRecords)
@@ -125,7 +141,9 @@ class BackgroundSyncManager: ObservableObject {
 
             syncProgress = "Syncing medications…"
             do {
-                let medicationRecords = await healthKit.fetchMedicationsForSync(since: lastMedsSync ?? fallbackSince)
+                let since = lookbackDate(from: lastMedsSync, fallback: fallbackSince, days: 45)
+                print("[DrJudah] Medication sync since: \(since) (watermark: \(lastMedsSync?.description ?? "none"))")
+                let medicationRecords = await healthKit.fetchMedicationsForSync(since: since)
                 syncedMedicationsCount = medicationRecords.count
                 syncProgress = "Uploading \(medicationRecords.count) medications…"
                 try await SupabaseManager.shared.syncMedications(medicationRecords)
@@ -138,7 +156,10 @@ class BackgroundSyncManager: ObservableObject {
 
             syncProgress = "Syncing vitals…"
             do {
-                let vitalRecords = await healthKit.fetchVitalsForSync(since: lastVitalsSync ?? fallbackSince)
+                // Shorter buffer: apple_health_vitals is by far the largest table.
+                let since = lookbackDate(from: lastVitalsSync, fallback: fallbackSince, days: 14)
+                print("[DrJudah] Vitals sync since: \(since) (watermark: \(lastVitalsSync?.description ?? "none"))")
+                let vitalRecords = await healthKit.fetchVitalsForSync(since: since)
                 syncedVitalsCount = vitalRecords.count
                 syncProgress = "Uploading \(vitalRecords.count) vitals…"
                 try await SupabaseManager.shared.syncVitals(vitalRecords)

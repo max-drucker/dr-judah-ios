@@ -334,37 +334,111 @@ class HealthKitManager: ObservableObject {
         print("[DrJudah] Workout auth status: \(workoutAuthStatus.rawValue) (1=notDetermined, 2=denied, 3=authorized)")
         print("[DrJudah] Fetching workouts since: \(since)")
 
-        return await withCheckedContinuation { continuation in
-            let query = HKSampleQuery(sampleType: .workoutType(), predicate: predicate, limit: 500, sortDescriptors: [sort]) { _, samples, error in
+        let workouts: [HKWorkout] = await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(sampleType: .workoutType(), predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, error in
                 if let error = error {
                     print("[DrJudah] Workout fetch error: \(error.localizedDescription)")
                 }
                 print("[DrJudah] Workout samples returned: \(samples?.count ?? -1)")
-                let records = (samples as? [HKWorkout])?.map { w in
-                    let workoutType = Workout(
-                        id: w.uuid,
-                        type: w.workoutActivityType,
-                        duration: w.duration,
-                        calories: w.totalEnergyBurned?.doubleValue(for: .kilocalorie()) ?? 0,
-                        distance: w.totalDistance?.doubleValue(for: .meter()),
-                        avgHeartRate: nil,
-                        maxHeartRate: nil,
-                        startDate: w.startDate,
-                        endDate: w.endDate
-                    ).typeName.lowercased()
+                continuation.resume(returning: (samples as? [HKWorkout]) ?? [])
+            }
+            store.execute(query)
+        }
 
-                    return WorkoutRecord(
-                        workoutType: workoutType,
-                        durationMinutes: w.duration / 60.0,
-                        caloriesBurned: w.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
-                        distanceMeters: w.totalDistance?.doubleValue(for: .meter()),
-                        avgHeartRate: nil,
-                        maxHeartRate: nil,
-                        startedAt: w.startDate,
-                        endedAt: w.endDate
-                    )
-                } ?? [] as [WorkoutRecord]
-                continuation.resume(returning: records)
+        // Enrich with heart rate. Bounded concurrency keeps a full 2-year backfill from serially
+        // grinding through hundreds of statistics queries and blowing the BGProcessingTask budget.
+        let maxConcurrent = 8
+        var heartRates: [Int: (avg: Double?, max: Double?)] = [:]
+
+        await withTaskGroup(of: (Int, (avg: Double?, max: Double?)).self) { group in
+            var next = 0
+            let inFlight = min(maxConcurrent, workouts.count)
+
+            for _ in 0..<inFlight {
+                let index = next
+                let workout = workouts[index]
+                group.addTask { (index, await self.fetchWorkoutHeartRate(for: workout)) }
+                next += 1
+            }
+
+            while let (index, hr) = await group.next() {
+                heartRates[index] = hr
+                if next < workouts.count {
+                    let index = next
+                    let workout = workouts[index]
+                    group.addTask { (index, await self.fetchWorkoutHeartRate(for: workout)) }
+                    next += 1
+                }
+            }
+        }
+
+        var records: [WorkoutRecord] = []
+        records.reserveCapacity(workouts.count)
+
+        for (index, w) in workouts.enumerated() {
+            let heartRate = heartRates[index] ?? (nil, nil)
+
+            records.append(WorkoutRecord(
+                workoutType: workoutTypeKey(for: w),
+                durationMinutes: w.duration / 60.0,
+                caloriesBurned: w.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
+                distanceMeters: w.totalDistance?.doubleValue(for: .meter()),
+                avgHeartRate: heartRate.avg,
+                maxHeartRate: heartRate.max,
+                startedAt: w.startDate,
+                endedAt: w.endDate
+            ))
+        }
+
+        let enriched = records.filter { $0.avgHeartRate != nil }.count
+        print("[DrJudah] Workout records prepared: \(records.count) (\(enriched) with heart rate)")
+        return records
+    }
+
+    /// Stable workout-type key for Supabase dedup.
+    /// `Workout.typeName` collapses every unmapped activity type to "Workout", which collides on the
+    /// `UNIQUE (user_id, workout_type, started_at)` constraint. Mapped types keep their existing
+    /// lowercased names so previously-synced rows continue to upsert-match instead of duplicating.
+    private func workoutTypeKey(for w: HKWorkout) -> String {
+        let mapped = Workout(
+            id: w.uuid,
+            type: w.workoutActivityType,
+            duration: w.duration,
+            calories: w.totalEnergyBurned?.doubleValue(for: .kilocalorie()) ?? 0,
+            distance: w.totalDistance?.doubleValue(for: .meter()),
+            avgHeartRate: nil,
+            maxHeartRate: nil,
+            startDate: w.startDate,
+            endDate: w.endDate
+        ).typeName
+
+        if mapped == "Workout" {
+            return "workout_\(w.workoutActivityType.rawValue)"
+        }
+        return mapped.lowercased()
+    }
+
+    /// Average + max heart rate for a workout's time window. Resilient by design: any failure or
+    /// missing data yields nil rather than throwing, so a workout still syncs without HR.
+    private func fetchWorkoutHeartRate(for w: HKWorkout) async -> (avg: Double?, max: Double?) {
+        let hrType = HKQuantityType(.heartRate)
+        let hrUnit = HKUnit.count().unitDivided(by: .minute())
+        let predicate = HKQuery.predicateForSamples(withStart: w.startDate, end: w.endDate, options: .strictStartDate)
+
+        return await withCheckedContinuation { continuation in
+            let query = HKStatisticsQuery(
+                quantityType: hrType,
+                quantitySamplePredicate: predicate,
+                options: [.discreteAverage, .discreteMax]
+            ) { _, stats, error in
+                if let error = error {
+                    print("[DrJudah] Workout HR fetch error: \(error.localizedDescription)")
+                    continuation.resume(returning: (nil, nil))
+                    return
+                }
+                let avg = stats?.averageQuantity()?.doubleValue(for: hrUnit)
+                let max = stats?.maximumQuantity()?.doubleValue(for: hrUnit)
+                continuation.resume(returning: (avg, max))
             }
             store.execute(query)
         }
