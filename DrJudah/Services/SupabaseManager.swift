@@ -22,6 +22,25 @@ class SupabaseManager {
 
     // MARK: - Sync Health Data
 
+    /// One-time cleanup for the double-counted cumulative vitals (raw Watch+iPhone samples were
+    /// summed server-side, inflating steps/distance/calories 2-3x). Deletes every row for the
+    /// cumulative metric types so the schema-v2 full resync can replace them with Apple-deduped
+    /// daily totals. Idempotent — safe to run even after the server-side purge already happened.
+    /// Keep in lockstep with HealthKitManager.cumulativeMetrics (plain strings here so this
+    /// non-MainActor class never touches the @MainActor HealthKitManager type).
+    private static let cumulativeMetricTypes = [
+        "steps", "distance", "active_calories", "basal_calories", "exercise_minutes", "flights_climbed",
+    ]
+
+    func purgeCumulativeVitals() async throws {
+        let metricTypes = Self.cumulativeMetricTypes
+        try await client.from("apple_health_vitals")
+            .delete()
+            .eq("user_id", value: userId)
+            .in("metric_type", values: metricTypes)
+            .execute()
+    }
+
     func syncHealthData(data: SyncPayload) async throws {
         try await syncVitals(data.vitals)
         try await syncWorkouts(data.workouts)

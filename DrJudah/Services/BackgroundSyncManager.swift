@@ -19,6 +19,11 @@ class BackgroundSyncManager: ObservableObject {
 
     private let lastSyncAttemptKey = "lastHealthSyncDate"
     private let lastVitalsSyncKey = "lastVitalsSyncDate"
+    private let vitalsSchemaVersionKey = "vitalsSyncSchemaVersion"
+    /// v2 (2026-08-02): cumulative metrics (steps/distance/calories/exercise/flights) sync as
+    /// Apple-deduped daily totals instead of raw samples. Raw samples double-counted Watch+iPhone.
+    /// Bumping this forces a one-time purge of the bad rows + full 2-year vitals resync.
+    private static let currentVitalsSchemaVersion = 2
     private let lastWorkoutsSyncKey = "lastWorkoutsSyncDate"
     private let lastSleepSyncKey = "lastSleepSyncDate"
     private let lastMedsSyncKey = "lastMedicationsSyncDate"
@@ -156,8 +161,16 @@ class BackgroundSyncManager: ObservableObject {
 
             syncProgress = "Syncing vitals…"
             do {
+                let needsFullResync = defaults.integer(forKey: vitalsSchemaVersionKey) < Self.currentVitalsSchemaVersion
                 // Shorter buffer: apple_health_vitals is by far the largest table.
-                let since = lookbackDate(from: lastVitalsSync, fallback: fallbackSince, days: 14)
+                let since = needsFullResync
+                    ? fallbackSince
+                    : lookbackDate(from: lastVitalsSync, fallback: fallbackSince, days: 14)
+                if needsFullResync {
+                    syncProgress = "Rebuilding activity history (one-time fix)…"
+                    print("[DrJudah] Vitals schema migration → v\(Self.currentVitalsSchemaVersion): purging over-counted cumulative rows, full resync since \(since)")
+                    try await SupabaseManager.shared.purgeCumulativeVitals()
+                }
                 print("[DrJudah] Vitals sync since: \(since) (watermark: \(lastVitalsSync?.description ?? "none"))")
                 let vitalRecords = await healthKit.fetchVitalsForSync(since: since)
                 syncedVitalsCount = vitalRecords.count
@@ -166,6 +179,7 @@ class BackgroundSyncManager: ObservableObject {
                 let now = Date()
                 lastVitalsSync = now
                 defaults.set(now, forKey: lastVitalsSyncKey)
+                defaults.set(Self.currentVitalsSchemaVersion, forKey: vitalsSchemaVersionKey)
             } catch {
                 errors.append("Vitals sync failed: \(error.localizedDescription)")
             }

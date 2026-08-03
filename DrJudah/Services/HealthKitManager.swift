@@ -285,16 +285,27 @@ class HealthKitManager: ObservableObject {
         )
     }
 
+    /// Cumulative activity metrics MUST sync as Apple-deduped daily totals, never raw samples.
+    /// Raw HKSampleQuery returns overlapping samples from BOTH Apple Watch and iPhone for the same
+    /// steps/distance/calories — summing them server-side double/triple-counts (e.g. a real ~15K-step
+    /// day stored as 44K). HKStatisticsQuery .cumulativeSum applies Apple's cross-device dedup,
+    /// matching the totals the Health app displays.
+    static let cumulativeMetrics: [(HKQuantityTypeIdentifier, String, HKUnit)] = [
+        (.stepCount, "steps", .count()),
+        (.distanceWalkingRunning, "distance", .meter()),
+        (.activeEnergyBurned, "active_calories", .kilocalorie()),
+        (.basalEnergyBurned, "basal_calories", .kilocalorie()),
+        (.appleExerciseTime, "exercise_minutes", .minute()),
+        (.flightsClimbed, "flights_climbed", .count()),
+    ]
+
     func fetchVitalsForSync(since: Date) async -> [VitalRecord] {
-        let metrics: [(HKQuantityTypeIdentifier, String, HKUnit)] = [
+        // Discrete/point-in-time metrics: raw samples are correct (each reading is real).
+        let discreteMetrics: [(HKQuantityTypeIdentifier, String, HKUnit)] = [
             (.heartRate, "heart_rate", .count().unitDivided(by: .minute())),
             (.restingHeartRate, "resting_heart_rate", .count().unitDivided(by: .minute())),
             (.heartRateVariabilitySDNN, "hrv", .secondUnit(with: .milli)),
             (.oxygenSaturation, "blood_oxygen", .percent()),
-            (.stepCount, "steps", .count()),
-            (.activeEnergyBurned, "active_calories", .kilocalorie()),
-            (.basalEnergyBurned, "basal_calories", .kilocalorie()),
-            (.appleExerciseTime, "exercise_minutes", .minute()),
             (.bodyMass, "weight", .gramUnit(with: .kilo)),
             (.vo2Max, "vo2_max", HKUnit(from: "ml/kg*min")),
             (.respiratoryRate, "respiratory_rate", .count().unitDivided(by: .minute())),
@@ -304,13 +315,11 @@ class HealthKitManager: ObservableObject {
             (.bodyFatPercentage, "body_fat_percentage", .percent()),
             (.leanBodyMass, "lean_body_mass", .gramUnit(with: .kilo)),
             (.walkingHeartRateAverage, "walking_heart_rate_avg", .count().unitDivided(by: .minute())),
-            (.flightsClimbed, "flights_climbed", .count()),
-            (.distanceWalkingRunning, "distance", .meter()),
         ]
 
         var vitals: [VitalRecord] = []
 
-        for (identifier, name, unit) in metrics {
+        for (identifier, name, unit) in discreteMetrics {
             let samples = await fetchSamples(identifier, since: since, limit: 2000)
             for sample in samples {
                 vitals.append(VitalRecord(
@@ -322,7 +331,47 @@ class HealthKitManager: ObservableObject {
             }
         }
 
+        // Cumulative metrics: one deduped daily-total row per day, recorded_at = local midnight.
+        // Upsert on (user_id, metric_type, recorded_at) refreshes the same row on later syncs.
+        for (identifier, name, unit) in Self.cumulativeMetrics {
+            let totals = await fetchDailyTotalsForSync(identifier, metricName: name, unit: unit, since: since)
+            vitals.append(contentsOf: totals)
+        }
+
         return vitals
+    }
+
+    private func fetchDailyTotalsForSync(_ identifier: HKQuantityTypeIdentifier, metricName: String, unit: HKUnit, since: Date) async -> [VitalRecord] {
+        let type = HKQuantityType(identifier)
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: since)
+        let now = Date()
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: now, options: .strictStartDate)
+
+        return await withCheckedContinuation { continuation in
+            let query = HKStatisticsCollectionQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum,
+                anchorDate: start,
+                intervalComponents: DateComponents(day: 1)
+            )
+            query.initialResultsHandler = { _, results, _ in
+                var records: [VitalRecord] = []
+                results?.enumerateStatistics(from: start, to: now) { stats, _ in
+                    if let sum = stats.sumQuantity()?.doubleValue(for: unit), sum > 0 {
+                        records.append(VitalRecord(
+                            metricType: metricName,
+                            value: sum,
+                            unit: unit.unitString,
+                            recordedAt: stats.startDate
+                        ))
+                    }
+                }
+                continuation.resume(returning: records)
+            }
+            store.execute(query)
+        }
     }
 
     func fetchWorkoutsForSync(since: Date) async -> [WorkoutRecord] {
