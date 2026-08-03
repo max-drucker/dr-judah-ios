@@ -111,6 +111,8 @@ class SupabaseManager {
                 if let dist = w.distanceMeters { row["distance_meters"] = .double(dist) }
                 if let avgHR = w.avgHeartRate { row["avg_heart_rate"] = .double(avgHR) }
                 if let maxHR = w.maxHeartRate { row["max_heart_rate"] = .double(maxHR) }
+                if let elev = w.elevationGainMeters { row["elevation_gain_meters"] = .double(elev) }
+                if let temp = w.weatherTempF { row["weather_temp_f"] = .double(temp) }
                 return row
             }
             try await client.from("apple_health_workouts")

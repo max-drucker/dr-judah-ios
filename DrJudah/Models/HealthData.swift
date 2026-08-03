@@ -133,6 +133,11 @@ struct WorkoutRecord: Codable {
     let maxHeartRate: Double?
     let startedAt: Date
     let endedAt: Date
+    /// From HKMetadataKeyElevationAscended — Max's daily loop climbs ~400ft; pace/HR analysis
+    /// is meaningless without grade context.
+    let elevationGainMeters: Double?
+    /// From HKMetadataKeyWeatherTemperature — heat materially changes effort cost.
+    let weatherTempF: Double?
 }
 
 struct SleepRecord: Codable {

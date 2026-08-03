@@ -452,6 +452,8 @@ class HealthKitManager: ObservableObject {
 
         for (index, w) in workouts.enumerated() {
             let heartRate = heartRates[index] ?? (nil, nil)
+            let elevation = (w.metadata?[HKMetadataKeyElevationAscended] as? HKQuantity)?.doubleValue(for: .meter())
+            let weatherTemp = (w.metadata?[HKMetadataKeyWeatherTemperature] as? HKQuantity)?.doubleValue(for: .degreeFahrenheit())
 
             records.append(WorkoutRecord(
                 workoutType: workoutTypeKey(for: w),
@@ -461,7 +463,9 @@ class HealthKitManager: ObservableObject {
                 avgHeartRate: heartRate.avg,
                 maxHeartRate: heartRate.max,
                 startedAt: w.startDate,
-                endedAt: w.endDate
+                endedAt: w.endDate,
+                elevationGainMeters: elevation,
+                weatherTempF: weatherTemp
             ))
         }
 

@@ -28,6 +28,11 @@ class BackgroundSyncManager: ObservableObject {
     /// Bumping this forces a one-time purge of the bad rows + full 2-year vitals resync.
     private static let currentVitalsSchemaVersion = 3
     private let lastWorkoutsSyncKey = "lastWorkoutsSyncDate"
+    private let workoutSchemaVersionKey = "workoutSyncSchemaVersion"
+    /// v2 (2026-08-02): workouts capture elevation gain + weather temp from HK metadata — pace/HR
+    /// analysis on Max's 400ft-climb loop was blind to grade and heat. Bump forces one full
+    /// resync so historical workouts get backfilled in place (upsert on type+started_at).
+    private static let currentWorkoutSchemaVersion = 2
     private let lastSleepSyncKey = "lastSleepSyncDate"
     private let sleepSchemaVersionKey = "sleepSyncSchemaVersion"
     /// v2 (2026-08-02): sleep syncs Watch-only with real source names. Previously Watch + iPhone +
@@ -154,7 +159,14 @@ class BackgroundSyncManager: ObservableObject {
 
             syncProgress = "Syncing workouts…"
             do {
-                let since = lookbackDate(from: lastWorkoutsSync, fallback: fallbackSince, days: 45)
+                let needsFullResync = defaults.integer(forKey: workoutSchemaVersionKey) < Self.currentWorkoutSchemaVersion
+                let since = needsFullResync
+                    ? fallbackSince
+                    : lookbackDate(from: lastWorkoutsSync, fallback: fallbackSince, days: 45)
+                if needsFullResync {
+                    syncProgress = "Backfilling workout elevation + weather (one-time)…"
+                    print("[DrJudah] Workout schema migration → v\(Self.currentWorkoutSchemaVersion): full resync since \(since)")
+                }
                 print("[DrJudah] Workout sync since: \(since) (watermark: \(lastWorkoutsSync?.description ?? "none"))")
                 let workoutRecords = await healthKit.fetchWorkoutsForSync(since: since)
                 syncedWorkoutsCount = workoutRecords.count
@@ -163,6 +175,9 @@ class BackgroundSyncManager: ObservableObject {
                 let now = Date()
                 lastWorkoutsSync = now
                 defaults.set(now, forKey: lastWorkoutsSyncKey)
+                if !workoutRecords.isEmpty {
+                    defaults.set(Self.currentWorkoutSchemaVersion, forKey: workoutSchemaVersionKey)
+                }
             } catch {
                 errors.append("Workout sync failed: \(error.localizedDescription)")
             }
