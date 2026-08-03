@@ -22,8 +22,11 @@ class BackgroundSyncManager: ObservableObject {
     private let vitalsSchemaVersionKey = "vitalsSyncSchemaVersion"
     /// v2 (2026-08-02): cumulative metrics (steps/distance/calories/exercise/flights) sync as
     /// Apple-deduped daily totals instead of raw samples. Raw samples double-counted Watch+iPhone.
+    /// v3 (2026-08-02): v2 run produced zero daily-total rows on-device (cause captured by new
+    /// diagnostics); bump forces another full resync now that activity rows upload first and
+    /// HK query errors are surfaced instead of swallowed.
     /// Bumping this forces a one-time purge of the bad rows + full 2-year vitals resync.
-    private static let currentVitalsSchemaVersion = 2
+    private static let currentVitalsSchemaVersion = 3
     private let lastWorkoutsSyncKey = "lastWorkoutsSyncDate"
     private let lastSleepSyncKey = "lastSleepSyncDate"
     private let lastMedsSyncKey = "lastMedicationsSyncDate"
@@ -172,14 +175,21 @@ class BackgroundSyncManager: ObservableObject {
                     try await SupabaseManager.shared.purgeCumulativeVitals()
                 }
                 print("[DrJudah] Vitals sync since: \(since) (watermark: \(lastVitalsSync?.description ?? "none"))")
-                let vitalRecords = await healthKit.fetchVitalsForSync(since: since)
+                let result = await healthKit.fetchVitalsForSync(since: since)
+                let vitalRecords = result.vitals
                 syncedVitalsCount = vitalRecords.count
                 syncProgress = "Uploading \(vitalRecords.count) vitals…"
                 try await SupabaseManager.shared.syncVitals(vitalRecords)
                 let now = Date()
                 lastVitalsSync = now
                 defaults.set(now, forKey: lastVitalsSyncKey)
-                defaults.set(Self.currentVitalsSchemaVersion, forKey: vitalsSchemaVersionKey)
+                if result.activityCount == 0 {
+                    // Do NOT mark the schema migration complete — activity backfill didn't happen.
+                    errors.append("Activity totals came back empty — \(result.activitySummary)")
+                } else {
+                    defaults.set(Self.currentVitalsSchemaVersion, forKey: vitalsSchemaVersionKey)
+                    syncProgress = "Activity totals: \(result.activitySummary)"
+                }
             } catch {
                 errors.append("Vitals sync failed: \(error.localizedDescription)")
             }

@@ -278,11 +278,19 @@ class HealthKitManager: ObservableObject {
         async let medications = fetchMedicationsForSync(since: since)
 
         return await SyncPayload(
-            vitals: vitals,
+            vitals: vitals.vitals,
             workouts: workouts,
             sleepSessions: sleepSessions,
             medications: medications
         )
+    }
+
+    struct VitalsSyncResult {
+        let vitals: [VitalRecord]
+        /// Per-metric daily-total counts or errors, e.g. "steps:730 distance:728 …" — surfaced in
+        /// the Sync UI when activity totals come back empty so failures are never silent again.
+        let activitySummary: String
+        let activityCount: Int
     }
 
     /// Cumulative activity metrics MUST sync as Apple-deduped daily totals, never raw samples.
@@ -299,7 +307,7 @@ class HealthKitManager: ObservableObject {
         (.flightsClimbed, "flights_climbed", .count()),
     ]
 
-    func fetchVitalsForSync(since: Date) async -> [VitalRecord] {
+    func fetchVitalsForSync(since: Date) async -> VitalsSyncResult {
         // Discrete/point-in-time metrics: raw samples are correct (each reading is real).
         let discreteMetrics: [(HKQuantityTypeIdentifier, String, HKUnit)] = [
             (.heartRate, "heart_rate", .count().unitDivided(by: .minute())),
@@ -318,6 +326,19 @@ class HealthKitManager: ObservableObject {
         ]
 
         var vitals: [VitalRecord] = []
+        var activityNotes: [String] = []
+        var activityCount = 0
+
+        // Cumulative metrics FIRST so their daily-total rows land in the earliest upload batches —
+        // a failure in a later (much larger) discrete batch can't starve the activity data.
+        // One deduped daily-total row per day, recorded_at = local midnight; upsert on
+        // (user_id, metric_type, recorded_at) refreshes the same row on later syncs.
+        for (identifier, name, unit) in Self.cumulativeMetrics {
+            let (totals, note) = await fetchDailyTotalsForSync(identifier, metricName: name, unit: unit, since: since)
+            vitals.append(contentsOf: totals)
+            activityCount += totals.count
+            activityNotes.append(note)
+        }
 
         for (identifier, name, unit) in discreteMetrics {
             let samples = await fetchSamples(identifier, since: since, limit: 2000)
@@ -331,17 +352,12 @@ class HealthKitManager: ObservableObject {
             }
         }
 
-        // Cumulative metrics: one deduped daily-total row per day, recorded_at = local midnight.
-        // Upsert on (user_id, metric_type, recorded_at) refreshes the same row on later syncs.
-        for (identifier, name, unit) in Self.cumulativeMetrics {
-            let totals = await fetchDailyTotalsForSync(identifier, metricName: name, unit: unit, since: since)
-            vitals.append(contentsOf: totals)
-        }
-
-        return vitals
+        let summary = activityNotes.joined(separator: " ")
+        print("[DrJudah] Activity daily totals — \(summary)")
+        return VitalsSyncResult(vitals: vitals, activitySummary: summary, activityCount: activityCount)
     }
 
-    private func fetchDailyTotalsForSync(_ identifier: HKQuantityTypeIdentifier, metricName: String, unit: HKUnit, since: Date) async -> [VitalRecord] {
+    private func fetchDailyTotalsForSync(_ identifier: HKQuantityTypeIdentifier, metricName: String, unit: HKUnit, since: Date) async -> ([VitalRecord], String) {
         let type = HKQuantityType(identifier)
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: since)
@@ -356,9 +372,19 @@ class HealthKitManager: ObservableObject {
                 anchorDate: start,
                 intervalComponents: DateComponents(day: 1)
             )
-            query.initialResultsHandler = { _, results, _ in
+            query.initialResultsHandler = { _, results, error in
+                if let error = error {
+                    print("[DrJudah] \(metricName) daily-totals query error: \(error.localizedDescription)")
+                    continuation.resume(returning: ([], "\(metricName):ERR(\(error.localizedDescription))"))
+                    return
+                }
+                guard let results = results else {
+                    print("[DrJudah] \(metricName) daily-totals query returned nil results with no error")
+                    continuation.resume(returning: ([], "\(metricName):nil-results"))
+                    return
+                }
                 var records: [VitalRecord] = []
-                results?.enumerateStatistics(from: start, to: now) { stats, _ in
+                results.enumerateStatistics(from: start, to: now) { stats, _ in
                     if let sum = stats.sumQuantity()?.doubleValue(for: unit), sum > 0 {
                         records.append(VitalRecord(
                             metricType: metricName,
@@ -368,7 +394,7 @@ class HealthKitManager: ObservableObject {
                         ))
                     }
                 }
-                continuation.resume(returning: records)
+                continuation.resume(returning: (records, "\(metricName):\(records.count)"))
             }
             store.execute(query)
         }
