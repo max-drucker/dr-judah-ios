@@ -546,8 +546,13 @@ class HealthKitManager: ObservableObject {
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
 
         return await withCheckedContinuation { continuation in
-            let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: 5000, sortDescriptors: [sort]) { _, samples, _ in
+            let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
                 let records = (samples as? [HKCategorySample])?.compactMap { sample -> SleepRecord? in
+                    // Apple Watch ONLY. iPhone writes crude in-bed estimates and Eight Sleep writes
+                    // its own overlapping stage records — including OTHER PEOPLE sleeping in the bed
+                    // (Olive contamination). Watch is the single source of truth for staging.
+                    let productType = sample.sourceRevision.productType ?? ""
+                    guard productType.hasPrefix("Watch") else { return nil }
                     let stage: String
                     if #available(iOS 16.0, *) {
                         switch HKCategoryValueSleepAnalysis(rawValue: sample.value) {
@@ -567,7 +572,12 @@ class HealthKitManager: ObservableObject {
                         default: stage = "unknown"
                         }
                     }
-                    return SleepRecord(sleepStage: stage, startedAt: sample.startDate, endedAt: sample.endDate)
+                    return SleepRecord(
+                        sleepStage: stage,
+                        startedAt: sample.startDate,
+                        endedAt: sample.endDate,
+                        source: sample.sourceRevision.source.name
+                    )
                 } ?? []
                 continuation.resume(returning: records)
             }

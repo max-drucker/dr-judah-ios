@@ -139,6 +139,10 @@ struct SleepRecord: Codable {
     let sleepStage: String
     let startedAt: Date
     let endedAt: Date
+    /// Real HealthKit source name (e.g. "Max's Apple Watch") — sleep MUST be single-source.
+    /// iPhone + Eight Sleep also write overlapping sleep samples (Eight Sleep even logs other
+    /// people in the bed), which double/triple-counts the night when summed server-side.
+    let source: String
 }
 
 struct HealthInsight: Identifiable {

@@ -32,6 +32,17 @@ class SupabaseManager {
         "steps", "distance", "active_calories", "basal_calories", "exercise_minutes", "flights_climbed",
     ]
 
+    /// One-time cleanup for multi-source sleep contamination: Watch + iPhone + Eight Sleep all
+    /// wrote overlapping stage rows under one anonymous "apple_health" source (Eight Sleep even
+    /// logs other people in the bed). Wipe the table; the sleep schema-v2 resync rebuilds it
+    /// Watch-only with real source names. Idempotent.
+    func purgeAllSleep() async throws {
+        try await client.from("apple_health_sleep")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
+    }
+
     func purgeCumulativeVitals() async throws {
         let metricTypes = Self.cumulativeMetricTypes
         try await client.from("apple_health_vitals")
@@ -132,7 +143,7 @@ class SupabaseManager {
                         "sleep_stage": .string(s.sleepStage),
                         "started_at": .string(isoFormatter.string(from: s.startedAt)),
                         "ended_at": .string(isoFormatter.string(from: s.endedAt)),
-                        "source": .string("apple_health"),
+                        "source": .string(s.source),
                     ]
                 }
                 try await client.from("apple_health_sleep")

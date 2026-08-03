@@ -29,6 +29,11 @@ class BackgroundSyncManager: ObservableObject {
     private static let currentVitalsSchemaVersion = 3
     private let lastWorkoutsSyncKey = "lastWorkoutsSyncDate"
     private let lastSleepSyncKey = "lastSleepSyncDate"
+    private let sleepSchemaVersionKey = "sleepSyncSchemaVersion"
+    /// v2 (2026-08-02): sleep syncs Watch-only with real source names. Previously Watch + iPhone +
+    /// Eight Sleep (which also logs other people in the bed) all landed as one anonymous source,
+    /// double/triple-counting every night. Bump forces purge + full 2-year sleep resync.
+    private static let currentSleepSchemaVersion = 2
     private let lastMedsSyncKey = "lastMedicationsSyncDate"
     private let healthKit = HealthKitManager()
 
@@ -119,7 +124,15 @@ class BackgroundSyncManager: ObservableObject {
         if isAuthorized {
             syncProgress = "Syncing sleep…"
             do {
-                let since = lookbackDate(from: lastSleepSync, fallback: fallbackSince, days: 45)
+                let needsFullResync = defaults.integer(forKey: sleepSchemaVersionKey) < Self.currentSleepSchemaVersion
+                let since = needsFullResync
+                    ? fallbackSince
+                    : lookbackDate(from: lastSleepSync, fallback: fallbackSince, days: 45)
+                if needsFullResync {
+                    syncProgress = "Rebuilding sleep history (one-time fix)…"
+                    print("[DrJudah] Sleep schema migration → v\(Self.currentSleepSchemaVersion): purging multi-source sleep rows, full resync since \(since)")
+                    try await SupabaseManager.shared.purgeAllSleep()
+                }
                 print("[DrJudah] Sleep sync since: \(since) (watermark: \(lastSleepSync?.description ?? "none"))")
                 let sleepRecords = await healthKit.fetchSleepForSync(since: since)
                 syncedSleepCount = sleepRecords.count
@@ -128,6 +141,13 @@ class BackgroundSyncManager: ObservableObject {
                 let now = Date()
                 lastSleepSync = now
                 defaults.set(now, forKey: lastSleepSyncKey)
+                if sleepRecords.isEmpty {
+                    if needsFullResync {
+                        errors.append("Sleep rebuild fetched 0 Watch-sourced records — migration not marked complete")
+                    }
+                } else {
+                    defaults.set(Self.currentSleepSchemaVersion, forKey: sleepSchemaVersionKey)
+                }
             } catch {
                 errors.append("Sleep sync failed: \(error.localizedDescription)")
             }
